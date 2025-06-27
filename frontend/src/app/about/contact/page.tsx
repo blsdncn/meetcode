@@ -50,7 +50,7 @@ export default function ContactPage() {
           <p className="mx-auto max-w-[600px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
             Have a question, forgot your password, or have another issue? 
             < br/>
-            Fill out the form below and we'll get back to you as soon as possible.
+            Fill out the form below and we&apos;ll get back to you as soon as possible.
           </p>
         </div>
 

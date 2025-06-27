@@ -110,7 +110,7 @@ export function TermsAndConditions() {
 
         <Section title="“As Is” and “As Available” Disclaimer">
           <p>
-            The service is provided to you "as is" and "as available" with all faults and without warranty. We make no representations that the service will meet your needs, be uninterrupted, or be free from errors or harmful components.
+            The service is provided to you &quot;as is&quot; and &quot;as available&quot; with all faults and without warranty. We make no representations that the service will meet your needs, be uninterrupted, or be free from errors or harmful components.
           </p>
         </Section>
 
@@ -157,7 +157,7 @@ export function TermsAndConditions() {
 
         <Section title="Changes to These Terms and Conditions">
           <p>
-            We may update these terms at any time. If the changes are material, we will provide at least 30 days' notice. Continued use of the service means you accept the new terms.
+            We may update these terms at any time. If the changes are material, we will provide at least 30 days&apos; notice. Continued use of the service means you accept the new terms.
           </p>
         </Section>
 

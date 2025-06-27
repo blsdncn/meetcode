@@ -26,4 +26,4 @@ echo "🚀 Starting FastAPI server (HTTPS)..."
 # For HTTP use:
 # uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 # For HTTPS use:
-uvicorn app.main:app --ssl-keyfile=./certs/key.pem --ssl-certfile=./certs/cert.pem --host 0.0.0.0 --port 8001
+uvicorn app.main:app --ssl-keyfile=./certs/key.pem --ssl-certfile=./certs/cert.pem --host 0.0.0.0 --port 8000

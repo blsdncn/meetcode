@@ -138,7 +138,7 @@ export default function Matchmaking() {
       console.error("Failed to connect:", error)
       setIsConnecting(false)
     }
-  }, [selectedLanguages, selectedCategories, allowUncategorized, isBeginEnabled, session])
+  }, [selectedLanguages, selectedCategories, allowUncategorized, isBeginEnabled, session, router])
 
   return (
     <div className="min-h-screen bg-background text-white flex flex-col items-center p-4">

@@ -29,7 +29,11 @@ export default function DashboardMain() {
           setUserId(response.data.id);
           setUsername(response.data.username);
         } catch (error: any) {
-          console.error("Failed to fetch user ID:", error.response?.status, error.response?.data);
+          if (axios.isAxiosError(error) && error.response) {
+            console.error("Failed to fetch user ID:", error.response.status, error.response.data);
+          } else {
+            console.error("Failed to fetch user ID:", error);
+          }
         }
       }
     }
@@ -73,7 +77,7 @@ export default function DashboardMain() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <MatchHistory matchHistory={matchHistory} />
+            <MatchHistory matchHistory={matchHistory as { match_id: string; problem?: { problem_id?: string; categories?: string[] }; status: boolean; }[]} />
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 # === FRONTEND ===
 
 # dependencies
-/node_modules
+**/node_modules
 /.pnp
 .pnp.js
 
@@ -32,7 +32,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # src
-package-lock.json
+**/package-lock*.json
+**.lock
 
 # === BACKEND ===
 
@@ -83,3 +84,5 @@ instance/
 *.session.sql
 backend/test.db
 dockerstuff/
+
+.next
