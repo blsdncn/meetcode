@@ -50,7 +50,7 @@ export function PrivacyPolicy() {
           <ul className="list-disc pl-6 space-y-2">
             <li><strong>Account</strong>: a unique profile created to access our service.</li>
             <li><strong>Affiliate</strong>: any entity under common control with us.</li>
-            <li><strong>Company</strong>: refers to MeetCode, also "we", "us", or "our".</li>
+            <li><strong>Company</strong>: refers to MeetCode, also &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;.</li>
             <li><strong>Cookies</strong>: small data files placed on your device.</li>
             <li><strong>Country</strong>: California, United States.</li>
             <li><strong>Device</strong>: any technology used to access the service.</li>

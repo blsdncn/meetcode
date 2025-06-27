@@ -43,9 +43,14 @@ export default function useDashboardData(user_id: string, accessToken: string) {
         setCategories(catData);
         setMatchHistory(historyRes.data || []);
       } catch (err: any) {
-        const errorMessage = err.response?.data?.detail || err.message || "Unknown error";
-        setError(`Failed to load dashboard data: ${errorMessage}`);
-        console.error("Dashboard fetch error:", err.response?.status, err.response?.data);
+        if (axios.isAxiosError(err) && err.response) {
+          const errorMessage = err.response.data.detail || err.message || "Unknown error";
+          setError(`Failed to load dashboard data: ${errorMessage}`);
+          console.error("Dashboard fetch error:", err.response.status, err.response.data);
+        } else {
+          setError("Failed to load dashboard data: Unknown error");
+          console.error("Dashboard fetch error:", err);
+        }
       } finally {
         setLoading(false);
       }
