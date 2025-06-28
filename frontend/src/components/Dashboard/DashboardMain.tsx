@@ -20,7 +20,7 @@ export default function DashboardMain() {
     async function fetchUserId() {
       if (session?.accessToken) {
         try {
-          const response = await axios.get(`${API_HOST_BASE_URL}auth/users/me`, {
+          const response = await axios.get(`${API_HOST_BASE_URL}user-auth/users/me`, {
             headers: {
               Authorization: `Bearer ${session.accessToken}`,
             },

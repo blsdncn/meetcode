@@ -32,25 +32,22 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(api_router, prefix="")
 #app.include_router(websocket_router, prefix="/ws", tags=["WebSocket"])
 
-# CORS 
+# CORS configuration for Docker-only deployment with Nginx proxy
 origins = [
-    "http://localhost:3000",
-    "https://localhost:3443", #reverse proxy 
-    "http://localhost:8000",
-    "https://localhost:8000",
-    "ws://localhost:8000",
-    "wss://localhost:8000",
-    "http://frontend:3000",
-    "https://frontend:3000"
+    "https://frontend.localhost",  # Updated for Docker setup with reverse proxy
 ]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
+    allow_credentials=False,        # Only True if using cookies; we use JWT in Authorization header
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type"],  # Authorization header needed for JWT
 )
 
 @app.get("/")
 async def root():
     return {"message": "Leetcode Study Partner Backend"}
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}

@@ -8,4 +8,4 @@ def get_db():
     finally:
         db.close()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/user-auth/token")

@@ -14,6 +14,13 @@ echo "✅ PostgreSQL is ready!"
 # Set Python path so 'app' can be found
 export PYTHONPATH=/app/src
 
-# start the fastapi server
+# run backend to initialize the database
+python -m src.app.scripts.init_db
+
+# run the load_problems script to populate problems table
+echo "📦 Loading problems into the database..."
+python -m src.app.scripts.load_problems
+
+# start the fastapi server (HTTP)
 echo "🚀 Starting FastAPI server (HTTP)..."
 uvicorn app.main:app --host 0.0.0.0 --port 8000

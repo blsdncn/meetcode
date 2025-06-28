@@ -89,21 +89,24 @@ npm run dev
 
 ---
 
-## 🔒 HTTPS Configuration
+## 🔒 Docker Deployment with Reverse Proxy
 
-When using HTTPS on the backend with self-signed certificates, you need to disable Node.js TLS certificate verification for the frontend to connect properly:
+The application now uses a Docker-only deployment with Nginx as a reverse proxy, eliminating the need for direct TLS configuration on the frontend.
 
-### Running Frontend with TLS Verification Disabled
+### Architecture Overview
 
-```bash
-NODE_TLS_REJECT_UNAUTHORIZED=0 npm run dev
-```
+- **Nginx**: Handles TLS termination and routes requests to frontend/backend
+- **Frontend**: Runs in Docker, uses relative URLs (no hardcoded ports)
+- **Backend**: Runs in Docker on plain HTTP internally, no TLS needed
+- **URLs**: Everything goes through `https://frontend.localhost`
 
-This is necessary when:
-1. Using secure WebSocket connections (WSS)
-2. Making HTTPS API calls to the backend
-3. Using self-signed certificates in development
+### Benefits
 
-⚠️ **Note**: Disabling TLS certificate verification should only be done in development. For production, use properly signed certificates.
+1. **No TLS complications**: Backend runs on plain HTTP inside Docker network
+2. **No hardcoded URLs**: Frontend uses relative paths that work in any environment
+3. **Simplified WebSockets**: All WS/WSS connections go through Nginx proxy
+4. **Production-ready**: Same setup works in development and production
+
+⚠️ **Note**: The old `NODE_TLS_REJECT_UNAUTHORIZED=0` workaround is no longer needed with this architecture.
 
 ---

@@ -43,10 +43,10 @@ export default function Matchmaking() {
 
   // Fetch categories from API
   useEffect(() => {
-    fetch("http://localhost:8000/api/problem/tags")
-      .then((res) => res.json())
-      .then((data) => setCategories((data.tags ?? []).sort((a: string, b: string) => a.localeCompare(b))))
-      .catch(() => setCategories([]))
+      fetch("/api/problem/tags")
+        .then((res) => res.json())
+        .then((data) => setCategories(data))
+        .catch(() => setCategories([]))
   }, [])
 
   // Check if begin button should be enabled
@@ -94,14 +94,12 @@ export default function Matchmaking() {
       
       console.log("Using token for WebSocket connection:", token);
       
-      // NOTE: For secure WebSocket connections with self-signed certificates:
-      // 1. Run frontend with NODE_TLS_REJECT_UNAUTHORIZED=0 npm run dev
-      // 2. Make sure backend is running with SSL certificates
-      const protocol = 'wss'; // Use secure WebSockets
-      const host = 'localhost:8001'; // This could come from env config
+      // Derive WebSocket URL from current location - no more hardcoded URLs
+      const { protocol, host } = window.location
+      const wsBase = protocol === "https:" ? "wss" : "ws"
       
-      // Create WebSocket connection with token as query param - removed trailing slash
-      const socket = new WebSocket(`${protocol}://${host}/ws/queue`);
+      // Create WebSocket connection with relative path
+      const socket = new WebSocket(`${wsBase}://${host}/ws/queue`);
       
       //console.log("Attempting WebSocket connection to:", `${protocol}://${host}/ws/connect`);
 
