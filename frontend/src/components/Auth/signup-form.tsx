@@ -41,7 +41,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
     try {
       const { username, email, password } = data;
-      await axios.post(`${API_HOST_BASE_URL}auth/register`, {
+      await axios.post(`${API_HOST_BASE_URL}user-auth/register`, {
         username,
         email,
         password,

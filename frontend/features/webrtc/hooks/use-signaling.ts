@@ -30,7 +30,10 @@ export function useSignaling({
   useEffect(() => {
     if (!enabled || !matchId || !peerId || !peerConnection) return
 
-    const socketUrl = `wss://localhost:8000/ws/signaling/match/${matchId}`
+    // Derive WebSocket URL from current location
+    const { protocol, host } = window.location
+    const wsBase = protocol === "https:" ? "wss" : "ws"
+    const socketUrl = `${wsBase}://${host}/ws/signaling/match/${matchId}`
     console.log("📡 Connecting to signaling server:", socketUrl)
 
     const socket = new WebSocket(socketUrl)

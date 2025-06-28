@@ -26,7 +26,7 @@ export default function useDashboardData(user_id: string, accessToken: string) {
               Authorization: `Bearer ${accessToken}`,
             },
           }),
-          axios.get(`${API_HOST_BASE_URL}api/match/history/${user_id}`, {
+          axios.get(`${API_HOST_BASE_URL}match/history/${user_id}`, {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },

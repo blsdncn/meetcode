@@ -39,7 +39,10 @@ html = """
             var ws;
             function sendConnect(event) {
                 var input = document.getElementById("jwt_token")
-                ws = new WebSocket("wss://localhost:8000/ws/connect?token=" + encodeURIComponent(input.value));
+                // Use relative WebSocket URL that works with reverse proxy
+                var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                var wsUrl = protocol + '//' + window.location.host + '/ws/connect?token=' + encodeURIComponent(input.value);
+                ws = new WebSocket(wsUrl);
                 var messages = document.getElementById('messages')
                 var message = document.createElement('li')
                 var content = document.createTextNode("Connected to WebSocket")

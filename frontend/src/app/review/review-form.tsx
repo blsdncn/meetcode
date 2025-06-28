@@ -26,7 +26,7 @@ export default function ReviewForm({ externalLink, matchId, hostId, guestId }: R
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
   
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+  //const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
     const reviewData = {
       to_host_rating: rating,
@@ -42,8 +42,8 @@ export default function ReviewForm({ externalLink, matchId, hostId, guestId }: R
     }
 
     try {
-      console.log("📡 Fetching from:", `${apiBaseUrl}/api/reviews/`)
-      const res = await fetch(`${apiBaseUrl}/api/reviews/`, {
+      console.log("📡 Fetching from:", `/api/reviews/`)
+      const res = await fetch(`/api/reviews/`, {
         
         method: "POST",
         headers: {

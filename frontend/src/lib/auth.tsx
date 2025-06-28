@@ -1,7 +1,7 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import axios from 'axios';
-export const API_HOST_BASE_URL = process.env.NEXT_PUBLIC_API_HOST_BASE_URL!;
+import { BACKEND_API_URL } from '@/lib/constants';
 import GitHubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 
@@ -47,7 +47,7 @@ export const authOptions: NextAuthOptions = {
           data.append("username", credentials.username);
           data.append("password", credentials.password);
 
-          const response = await axios.post(`${API_HOST_BASE_URL}auth/token`, data, {
+          const response = await axios.post(`${BACKEND_API_URL}user-auth/token`, data, {
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
             },
@@ -57,7 +57,7 @@ export const authOptions: NextAuthOptions = {
 
           if (access_token && refresh_token) {
             return {
-              id: access_token,
+              id: credentials.username, // Use username as ID instead of access_token
               accessToken: access_token,
               refreshToken: refresh_token,
               expiresIn: expires_in,
@@ -90,7 +90,7 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account }) {
       if (account?.provider === 'google' || account?.provider === 'github') {
         try {
-          const res = await axios.post(`${API_HOST_BASE_URL}auth/oauth-register`, {
+          const res = await axios.post(`${BACKEND_API_URL}user-auth/oauth-register`, {
             email: user.email,
             username: user.name ?? user.email?.split("@")[0],
             provider: account.provider,
@@ -126,36 +126,58 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user, account }) {
+      console.log("=== JWT CALLBACK DEBUG ===");
+      console.log("Has user:", !!user);
+      console.log("Account type:", account?.type);
+      console.log("Current token:", token);
+      console.log("User data:", user);
+      
       if (user && account?.type === "credentials") {
+        console.log("Setting up credentials token");
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
         token.expiresAt = Date.now() + (user.expiresIn ?? 0) * 1000;
+        token.sub = user.id; // Make sure sub is set for NextAuth
+        console.log("Token after setup:", token);
       }
 
-      if (account?.type !== "credentials") {
+      // For OAuth providers, just return the token as-is
+      if (account?.type !== "credentials" && account?.type) {
+        console.log("OAuth account, returning token as-is");
         return token;
       }
 
-      if (token.expiresAt && Date.now() < token.expiresAt) {
-        return token;
+      // For credentials, check if refresh is needed
+      if (account?.type === "credentials" || token.accessToken) {
+        if (token.expiresAt && Date.now() < token.expiresAt) {
+          console.log("Token still valid, no refresh needed");
+          return token;
+        }
+
+        console.log("Attempting token refresh");
+        try {
+          const response = await axios.post(`${BACKEND_API_URL}user-auth/refresh`, {
+            refresh_token: token.refreshToken,
+          });
+
+          const { access_token, expires_in } = response.data;
+
+          const refreshedToken = {
+            ...token,
+            accessToken: access_token,
+            expiresAt: Date.now() + (expires_in ?? 0) * 1000,
+          };
+          
+          console.log("Token refreshed successfully:", refreshedToken);
+          return refreshedToken;
+        } catch (error) {
+          console.error('Token refresh error:', error);
+          return { ...token, error: 'RefreshAccessTokenError' };
+        }
       }
-
-      try {
-        const response = await axios.post(`${API_HOST_BASE_URL}auth/refresh`, {
-          refresh_token: token.refreshToken,
-        });
-
-        const { access_token, expires_in } = response.data;
-
-        return {
-          ...token,
-          accessToken: access_token,
-          expiresAt: Date.now() + (expires_in ?? 0) * 1000,
-        };
-      } catch (error) {
-        console.error('Token refresh error:', error);
-        return { ...token, error: 'RefreshAccessTokenError' };
-      }
+      
+      console.log("Returning token unchanged:", token);
+      return token;
     },
 
     async session({ session, token }) {
@@ -169,7 +191,7 @@ export const authOptions: NextAuthOptions = {
     async signOut({ token }) {
       try {
         if (token?.refreshToken) {
-          await axios.post(`${API_HOST_BASE_URL}auth/logout`, {
+          await axios.post(`${BACKEND_API_URL}user-auth/logout`, {
             refresh_token: token.refreshToken,
           });
           console.log('Tokens revoked successfully');
