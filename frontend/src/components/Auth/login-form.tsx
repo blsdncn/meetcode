@@ -16,7 +16,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username is required, must be at least 3 characters"),
@@ -24,7 +23,6 @@ const loginSchema = z.object({
 });
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
-  const router = useRouter();
   const form = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -49,8 +47,15 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 
       console.log("SignIn result:", result);
 
-      if (result?.ok && result.url) {
-        router.push(result.url);
+      if (result?.ok) {
+        // UNIFIED FIX: Use window.location.href for post-login redirect
+        // This forces a full page reload, ensuring:
+        // 1. Server-side session cookie is properly read
+        // 2. Client-side session state is properly initialized 
+        // 3. Middleware runs with correct session data
+        // 4. No race condition between client-side router and session state
+        console.log("Login successful, redirecting to:", callbackUrl);
+        window.location.href = callbackUrl;
       } else if (result?.error === 'CredentialsSignin') {
         toast.error('Invalid username or password');
       } else if (result?.error) {
