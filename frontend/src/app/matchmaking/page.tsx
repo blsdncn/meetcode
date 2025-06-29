@@ -45,7 +45,7 @@ export default function Matchmaking() {
   useEffect(() => {
       fetch("/api/problem/tags")
         .then((res) => res.json())
-        .then((data) => setCategories(data))
+        .then((data) => setCategories(data.tags || []))
         .catch(() => setCategories([]))
   }, [])
 
