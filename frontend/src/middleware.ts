@@ -13,12 +13,25 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // Check if token has an error (like refresh failure)
+  if (token.error) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
   // If the token exists, allow the request to proceed
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard", "/dashboard/:path*", "/matchmaking", "/matchmaking/:path*",
-            "/communication", "/communication/:path*", "/review", "/review/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/matchmaking/:path*",
+    "/communication/:path*",
+    "/review/:path*",
+    "/account/:path*", // Protect the account page
+    "/videochat/:path*", // Protect the video chat page
+  ],
 };
 

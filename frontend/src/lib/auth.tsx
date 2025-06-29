@@ -29,6 +29,33 @@ declare module 'next-auth/jwt' {
   }
 }
 
+// Helper function for token refresh - extracted for clarity
+async function refreshAccessToken(token: any) {
+  try {
+    console.log("Attempting token refresh for:", token.sub);
+    const response = await axios.post(`${BACKEND_API_URL}user-auth/refresh`, {
+      refresh_token: token.refreshToken,
+    });
+
+    const { access_token, expires_in } = response.data;
+
+    const refreshedToken = {
+      ...token,
+      accessToken: access_token,
+      expiresAt: Date.now() + (expires_in ?? 3600) * 1000, // Default to 1 hour if missing
+    };
+    
+    console.log("Token refreshed successfully");
+    return refreshedToken;
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    return {
+      ...token,
+      error: 'RefreshAccessTokenError',
+    };
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -57,10 +84,11 @@ export const authOptions: NextAuthOptions = {
 
           if (access_token && refresh_token) {
             return {
-              id: credentials.username, // Use username as ID instead of access_token
+              id: credentials.username,
               accessToken: access_token,
               refreshToken: refresh_token,
-              expiresIn: expires_in,
+              // Ensure we always have a valid expires_in value
+              expiresIn: expires_in ?? 3600, // Default to 1 hour if backend doesn't provide it
             };
           }
 
@@ -85,7 +113,16 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
-      return url.startsWith(baseUrl) ? url : baseUrl;
+      // Allow redirects to routes within the same domain
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      // Allow redirects to the same origin
+      if (url.startsWith(baseUrl)) {
+        return url;
+      }
+      // Default to base URL for external redirects
+      return baseUrl;
     },
     async signIn({ user, account }) {
       if (account?.provider === 'google' || account?.provider === 'github') {
@@ -129,53 +166,45 @@ export const authOptions: NextAuthOptions = {
       console.log("=== JWT CALLBACK DEBUG ===");
       console.log("Has user:", !!user);
       console.log("Account type:", account?.type);
-      console.log("Current token:", token);
-      console.log("User data:", user);
       
+      // Initial sign in with credentials
       if (user && account?.type === "credentials") {
-        console.log("Setting up credentials token");
-        token.accessToken = user.accessToken;
-        token.refreshToken = user.refreshToken;
-        token.expiresAt = Date.now() + (user.expiresIn ?? 0) * 1000;
-        token.sub = user.id; // Make sure sub is set for NextAuth
-        console.log("Token after setup:", token);
+        console.log("Initial credentials sign-in, setting up token");
+        const initialToken = {
+          accessToken: user.accessToken,
+          refreshToken: user.refreshToken,
+          expiresAt: Date.now() + (user.expiresIn ?? 3600) * 1000, // Fixed: ensure valid number
+          sub: user.id,
+        };
+        console.log("Initial token created:", initialToken);
+        return initialToken;
       }
 
-      // For OAuth providers, just return the token as-is
-      if (account?.type !== "credentials" && account?.type) {
+      // For OAuth providers (GitHub, Google), return token as-is
+      if (account?.type === "oauth") {
         console.log("OAuth account, returning token as-is");
         return token;
       }
 
-      // For credentials, check if refresh is needed
-      if (account?.type === "credentials" || token.accessToken) {
-        if (token.expiresAt && Date.now() < token.expiresAt) {
+      // For subsequent requests, check if token needs refresh
+      if (token.accessToken) {
+        // Add a 60-second buffer to proactively refresh before expiry
+        const refreshBuffer = 60 * 1000;
+        if (token.expiresAt && Date.now() < (token.expiresAt - refreshBuffer)) {
           console.log("Token still valid, no refresh needed");
           return token;
         }
 
-        console.log("Attempting token refresh");
-        try {
-          const response = await axios.post(`${BACKEND_API_URL}user-auth/refresh`, {
-            refresh_token: token.refreshToken,
-          });
-
-          const { access_token, expires_in } = response.data;
-
-          const refreshedToken = {
-            ...token,
-            accessToken: access_token,
-            expiresAt: Date.now() + (expires_in ?? 0) * 1000,
-          };
-          
-          console.log("Token refreshed successfully:", refreshedToken);
-          return refreshedToken;
-        } catch (error) {
-          console.error('Token refresh error:', error);
-          return { ...token, error: 'RefreshAccessTokenError' };
+        // Token expired or close to expiry, attempt refresh
+        if (token.refreshToken) {
+          console.log("Token near expiry, attempting refresh");
+          return await refreshAccessToken(token);
+        } else {
+          console.log("No refresh token available");
+          return { ...token, error: 'NoRefreshToken' };
         }
       }
-      
+
       console.log("Returning token unchanged:", token);
       return token;
     },
