@@ -15,6 +15,7 @@ settings = get_settings()
 def create_problem(db: Session, problem: ProblemCreate) -> Problem:
     db_problem = Problem(
         problem_id = problem.problem_id,
+        title = problem.title,
         problem_link = str(problem.problem_link),
         methods_video_link = str(problem.methods_video_link),
         categories = problem.categories,
@@ -38,6 +39,7 @@ def update_problem(db: Session, lc_id: int, problem_update: ProblemCreate):
     if not existing_problem:
         raise HTTPException(status_code=404, detail="Problem not found")
     existing_problem.problem_id = problem_update.problem_id,
+    existing_problem.title = problem_update.title,
     existing_problem.problem_link = str(problem_update.problem_link),
     existing_problem.methods_video_link = str(problem_update.methods_video_link),
     existing_problem.categories = problem_update.categories

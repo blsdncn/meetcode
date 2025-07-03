@@ -8,6 +8,7 @@ from typing import Literal
 class ProblemResponse(BaseModel):
     id: int
     problem_id: int
+    title: str
     problem_link: AnyHttpUrl
     methods_video_link: AnyHttpUrl
     categories: conlist(Annotated[str, StringConstraints(pattern=r"^[a-zA-Z0-9-\s()]+$", max_length=32)], min_length=0, max_length=8)
@@ -18,6 +19,7 @@ class ProblemResponse(BaseModel):
 
 class ProblemCreate(BaseModel):
     problem_id: int
+    title: str
     problem_link: AnyHttpUrl
     methods_video_link: AnyHttpUrl
     categories: conlist(Annotated[str, StringConstraints(pattern=r"^[a-zA-Z0-9-\s()]+$", max_length=32)], min_length=0, max_length=8)

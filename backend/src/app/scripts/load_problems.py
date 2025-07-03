@@ -25,6 +25,7 @@ def load_data():
     for _, row in df.iterrows():
         problem = Problem(
             problem_id=row['id'],
+            title=row['title'],
             problem_link=row['problem_URL'],
             methods_video_link=row['solution_URL'],
             categories=row['topic_tags'].strip('{}').split(',')  # Postgres text[]

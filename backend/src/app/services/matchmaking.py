@@ -163,6 +163,7 @@ async def remove_matched_users_from_queue(matched_pairs: List[Tuple[QueueTicket,
                 del queue[user_id]
 
 async def matchmaking_poll(db: Session):
+    print("we shouldn't be here")
     """Main matchmaking loop that runs continuously to match users."""
     poll_interval = 5  # seconds between matchmaking attempts
     
