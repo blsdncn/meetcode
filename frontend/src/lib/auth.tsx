@@ -4,13 +4,13 @@ import axios from 'axios';
 import { BACKEND_API_URL } from '@/lib/constants';
 import GitHubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
+import api from './api';
 
 declare module 'next-auth' {
   interface User {
     id?: string;
     accessToken?: string;
     refreshToken?: string;
-    expiresIn?: number;
   }
 
   interface Session {
@@ -33,16 +33,16 @@ declare module 'next-auth/jwt' {
 async function refreshAccessToken(token: any) {
   try {
     console.log("Attempting token refresh for:", token.sub);
-    const response = await axios.post(`${BACKEND_API_URL}user-auth/refresh`, {
+    const response = await api.post(`${BACKEND_API_URL}user-auth/refresh`, {
       refresh_token: token.refreshToken,
     });
 
-    const { access_token, expires_in } = response.data;
+    const { access_token } = response.data;
 
     const refreshedToken = {
       ...token,
       accessToken: access_token,
-      expiresAt: Date.now() + (expires_in ?? 3600) * 1000, // Default to 1 hour if missing
+      expiresAt: getTokenExpiration(access_token), // Extract expiration from new token
     };
     
     console.log("Token refreshed successfully");
@@ -53,6 +53,16 @@ async function refreshAccessToken(token: any) {
       ...token,
       error: 'RefreshAccessTokenError',
     };
+  }
+}
+
+function getTokenExpiration(token: string): number {
+  try {
+    const decoded = JSON.parse(atob(token.split('.')[1]));
+    return decoded.exp * 1000; // Convert to milliseconds
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return Date.now() + 15 * 60 * 1000; // Fallback: 15 minutes from now
   }
 }
 
@@ -74,21 +84,19 @@ export const authOptions: NextAuthOptions = {
           data.append("username", credentials.username);
           data.append("password", credentials.password);
 
-          const response = await axios.post(`${BACKEND_API_URL}user-auth/token`, data, {
+          const response = await api.post(`${BACKEND_API_URL}user-auth/token`, data, {
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
             },
           });
 
-          const { access_token, refresh_token, expires_in } = response.data;
+          const { access_token, refresh_token } = response.data;
 
           if (access_token && refresh_token) {
             return {
               id: credentials.username,
               accessToken: access_token,
               refreshToken: refresh_token,
-              // Ensure we always have a valid expires_in value
-              expiresIn: expires_in ?? 3600, // Default to 1 hour if backend doesn't provide it
             };
           }
 
@@ -173,7 +181,7 @@ export const authOptions: NextAuthOptions = {
         const initialToken = {
           accessToken: user.accessToken,
           refreshToken: user.refreshToken,
-          expiresAt: Date.now() + (user.expiresIn ?? 3600) * 1000, // Fixed: ensure valid number
+          expiresAt: user.accessToken ? getTokenExpiration(user.accessToken): Date.now() + 15 * 60 * 1000,
           sub: user.id,
         };
         console.log("Initial token created:", initialToken);
@@ -220,7 +228,7 @@ export const authOptions: NextAuthOptions = {
     async signOut({ token }) {
       try {
         if (token?.refreshToken) {
-          await axios.post(`${BACKEND_API_URL}user-auth/logout`, {
+          await api.post(`${BACKEND_API_URL}user-auth/logout`, {
             refresh_token: token.refreshToken,
           });
           console.log('Tokens revoked successfully');

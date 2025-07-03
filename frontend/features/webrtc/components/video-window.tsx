@@ -7,6 +7,8 @@ import { useSignaling } from "../hooks/use-signaling"
 import DeviceSelection from "./device-selection"
 import VideoCall from "./video-call"
 import LeetCodeProblemCard from "./leetcode-problem-card"
+import api from "@/lib/api"
+import { API_HOST_BASE_URL } from "@/lib/constants"
 
 // LeetCode problem interface
 export interface LeetCodeProblem {
@@ -26,17 +28,66 @@ export default function VideoWindow({ matchId, peerId, role }: { matchId: string
   const [statusMessage, setStatusMessage] = useState("Waiting for peer to connect...")
   const [peerLeft, setPeerLeft] = useState(false)
 
-  // LeetCode problem state 
-  // TODO: crud pull for a random problem with matching category
-  const [problem] = useState<LeetCodeProblem>({
-    id: "LC-704",
-    title: "Binary Search",
-    categories: ["Algorithms", "Arrays", "Binary Search"],
-    url: "https://leetcode.com/problems/binary-search/",
-  })
+  // LeetCode problem state
+  const [problem, setProblem] = useState<LeetCodeProblem | null>(null)
+  const [problemLoading, setProblemLoading] = useState(true)
+  const [problemError, setProblemError] = useState<string | null>(null)
 
   // Get user media
-  const { stream: localStream, availableDevices, switchDevice, getStreamWithDevices } = useUserMedia()
+  const { stream: localStream, availableDevices, getStreamWithDevices } = useUserMedia()
+
+  // Fetch problem data when component mounts
+  useEffect(() => {
+    const fetchProblemData = async () => {
+      try {
+        setProblemLoading(true)
+        setProblemError(null)
+        
+        // First, get match details to get the problem_id
+        const matchResponse = await api.get(`${API_HOST_BASE_URL}match/details/${matchId}`)
+        const matchData = matchResponse.data
+        
+        if (!matchData) {
+          throw new Error("Match not found")
+        }
+        
+        // Extract problem_id from the match data (now returns single object)
+        const problemId = matchData.problem_id
+        if (!problemId) {
+          throw new Error("No problem associated with this match")
+        }
+        
+        // Then fetch the problem details
+        const problemResponse = await api.get(`${API_HOST_BASE_URL}problem/${problemId}`)
+        const problemData = problemResponse.data
+        
+        // Transform backend data to frontend LeetCode problem format
+        const transformedProblem: LeetCodeProblem = {
+          id: `LC-${problemData.problem_id}`,
+          title: problemData.title,
+          categories: problemData.categories || [],
+          url: problemData.problem_link,
+        }
+        
+        setProblem(transformedProblem)
+      } catch (error) {
+        console.error("Error fetching problem data:", error)
+        setProblemError("Failed to load problem data")
+        
+        // Fallback to hardcoded problem to keep the UI functional
+        setProblem({
+          id: "LC-704",
+          title: "Binary Search",
+          categories: ["Algorithms", "Arrays", "Binary Search"],
+          url: "https://leetcode.com/problems/binary-search/",
+        })
+      } finally {
+        setProblemLoading(false)
+      }
+    }
+
+    fetchProblemData()
+  }, [matchId])
 
   // Set up WebRTC
   const {
@@ -131,7 +182,17 @@ export default function VideoWindow({ matchId, peerId, role }: { matchId: string
         ) : (
           <div className="flex flex-col gap-4 max-w-7xl mx-auto">
             <div className="w-full">
-              <LeetCodeProblemCard problem={problem} />
+              {problemLoading ? (
+                <div className="p-4 border rounded-lg">
+                  <p>Loading problem...</p>
+                </div>
+              ) : problemError ? (
+                <div className="p-4 border rounded-lg bg-red-50 text-red-700">
+                  <p>Error: {problemError}</p>
+                </div>
+              ) : problem ? (
+                <LeetCodeProblemCard problem={problem} />
+              ) : null}
             </div>
             <VideoCall
               localStream={localStream}

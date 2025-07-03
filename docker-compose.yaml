@@ -17,7 +17,7 @@ services:
   backend: #-https:
     build:
       context: ./backend
-    container_name: meetcode-backend-https
+    container_name: meetcode-backend
     restart: always
     expose:
       - "8000"
