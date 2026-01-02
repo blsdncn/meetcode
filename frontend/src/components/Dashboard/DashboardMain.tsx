@@ -67,12 +67,14 @@ export default function DashboardMain() {
             <CategoryChart categories={categories} />
           </div>
 
-          <div className="flex flex-col gap-6">
-            <MatchHistory matchHistory={matchHistory as { match_id: string; problem?: { problem_id?: string; categories?: string[] }; status: boolean; }[]} />
+          <div className="flex flex-col gap-6 max-h-[500px]">
+            <div className="overflow-y-auto flex-1">
+              <MatchHistory matchHistory={matchHistory as { match_id: string; problem?: { problem_id?: string; categories?: string[] }; status: boolean; }[]} />
+            </div>
           </div>
         </div>
 
-        <div className="flex justify-center mt-20">
+        <div className="flex justify-center mt-10 mb-20 sticky bottom-24">
           <Link href="/matchmaking">
             <Button
               size="lg"

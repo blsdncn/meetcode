@@ -83,7 +83,19 @@ async def match_signaling(websocket: WebSocket, match_id: str):
 
         while True:
             data = await websocket.receive_json()
-            print(f"📩 Received from {match_id}: {data}")
+
+            # Handle end_match event - notify peer and close
+            if data.get("event") == "end_match":
+                for peer in room:
+                    if peer != websocket:
+                        try:
+                            await peer.send_json({ 
+                                "event": "match_ended", 
+                                "reason": "peer_ended" 
+                            })
+                        except Exception:
+                            pass
+                continue
 
             # Relay message to the other peer
             for peer in room:
@@ -91,7 +103,16 @@ async def match_signaling(websocket: WebSocket, match_id: str):
                     await peer.send_json(data)
 
     except WebSocketDisconnect:
-        print(f"🔌 WebSocket disconnected: match_id={match_id}")
+        # Notify other peer that this user disconnected
+        for peer in room:
+            if peer != websocket:
+                try:
+                    await peer.send_json({ 
+                        "event": "match_ended", 
+                        "reason": "peer_disconnected" 
+                    })
+                except Exception:
+                    pass
         room.remove(websocket)
         if not room:
             del rooms[match_id]

@@ -43,40 +43,49 @@
 	--radius-xl: calc(var(--radius) + 4px);
 }
 
+/* 
+ * Kanagawa Color Palette
+ * Light: Kanagawa Lotus
+ * Dark: Kanagawa Dragon
+ * 
+ * See THIRD_PARTY_NOTICES.md for license attribution
+ */
+
 :root {
 	--radius: 0.625rem;
   
-	--background: oklch(1 0 0);                    /* pure white background */
-	--foreground: oklch(0.2 0.01 270);             /* near-black general text */
+	/* Kanagawa Lotus - Light Mode */
+	--background: oklch(0.94 0.03 95);             /* #f2ecbc - warm cream */
+	--foreground: oklch(0.40 0.02 280);            /* #545464 - dark gray-purple */
   
-	--card: oklch(1 0 0);                          /* white card background */
-	--card-foreground: oklch(0.23 0.01 270);       /* dark gray text on cards */
+	--card: oklch(0.96 0.02 95);                   /* slightly lighter cream */
+	--card-foreground: oklch(0.40 0.02 280);       /* same as foreground */
   
 	--popover: var(--card);
 	--popover-foreground: var(--card-foreground);
   
-	--primary: oklch(0.7153 0.2257 49.09);        /* true logo orange */
-	--primary-foreground: oklch(1 0 0);           /* white text on orange */
+	--primary: oklch(0.50 0.10 250);               /* #4d699b - muted blue */
+	--primary-foreground: oklch(0.98 0.01 95);     /* light text on primary */
   
-	--secondary: oklch(0.96 0.01 270);             /* light gray secondary background */
-	--secondary-foreground: oklch(0.23 0.01 270);  /* dark gray text */
+	--secondary: oklch(0.88 0.01 280);             /* soft gray */
+	--secondary-foreground: oklch(0.40 0.02 280);
   
-	--muted: oklch(0.97 0.01 270);                 /* for background tints */
-	--muted-foreground: oklch(0.5 0.01 270);       /* soft gray text */
+	--muted: oklch(0.85 0.01 280);                 /* #c9cbd1 - light gray */
+	--muted-foreground: oklch(0.50 0.02 280);      /* softer text */
   
-	--accent: oklch(0.96 0.01 270);
-	--accent-foreground: oklch(0.23 0.01 270);
+	--accent: oklch(0.70 0.18 60);                 /* #e98a00 - warm orange accent */
+	--accent-foreground: oklch(0.20 0.02 280);
   
-	--destructive: oklch(0.577 0.245 27.325);      /* reddish error */
-	--border: oklch(0.85 0.01 270);                /* soft gray border */
-	--input: oklch(0.9 0.01 270);                  /* form field backgrounds */
-	--ring: oklch(0.4 0.01 270);                   /* subtle focus ring */
+	--destructive: oklch(0.55 0.20 20);            /* #c84053 - deep red */
+	--border: oklch(0.82 0.01 280);                /* #c9cbd1 - soft border */
+	--input: oklch(0.90 0.01 280);                 /* light input bg */
+	--ring: oklch(0.50 0.10 250);                  /* matches primary */
   
-	--chart-1: oklch(0.646 0.222 41.116);
-	--chart-2: oklch(0.6 0.118 184.704);
-	--chart-3: oklch(0.398 0.07 227.392);
-	--chart-4: oklch(0.828 0.189 84.429);
-	--chart-5: oklch(0.769 0.188 70.08);
+	--chart-1: oklch(0.50 0.10 250);
+	--chart-2: oklch(0.70 0.18 60);
+	--chart-3: oklch(0.55 0.20 20);
+	--chart-4: oklch(0.60 0.15 140);
+	--chart-5: oklch(0.65 0.12 200);
   
 	--sidebar: var(--card);
 	--sidebar-foreground: var(--foreground);
@@ -89,31 +98,32 @@
   }
 
 .dark {
-	--background: oklch(0.18 0.01 275);         /* deep gray dashboard background (#1a1c1f) */
-	--foreground: oklch(0.98 0.01 270);         /* soft white text (#f5f5f7) */
+	/* Kanagawa Dragon - Dark Mode */
+	--background: oklch(0.15 0.01 30);             /* #181616 - deep charcoal */
+	--foreground: oklch(0.82 0.01 140);            /* #c5c9c5 - soft sage gray */
   
-	--card: oklch(0.23 0.01 276);               /* darker card (#2a2d31) */
-	--card-foreground: var(--foreground);       /* same as text */
+	--card: oklch(0.20 0.01 30);                   /* #2a2a2a - darker card */
+	--card-foreground: var(--foreground);
   
 	--popover: var(--card);
 	--popover-foreground: var(--card-foreground);
   
-	--primary: oklch(0.7153 0.2257 49.09);        /* true logo orange */
-	--primary-foreground: oklch(1 0 0);           /* white text on orange */
+	--primary: oklch(0.72 0.08 220);               /* #7fb4ca - soft cyan-blue */
+	--primary-foreground: oklch(0.15 0.01 30);     /* dark text on primary */
   
-	--secondary: oklch(0.25 0.015 270);         /* optional darker gray */
+	--secondary: oklch(0.25 0.01 30);              /* darker secondary */
 	--secondary-foreground: var(--foreground);
   
-	--muted: oklch(0.23 0.01 276);              /* muted backgrounds same as card */
-	--muted-foreground: oklch(0.7 0.01 270);    /* lighter gray text */
+	--muted: oklch(0.22 0.01 30);                  /* #2a2a2a - muted bg */
+	--muted-foreground: oklch(0.65 0.01 140);      /* softer sage text */
   
-	--accent: oklch(0.27 0.01 275);             /* slightly brighter than card */
-	--accent-foreground: var(--foreground);
+	--accent: oklch(0.80 0.12 80);                 /* #e6c384 - warm gold accent */
+	--accent-foreground: oklch(0.15 0.01 30);
   
-	--destructive: oklch(0.704 0.191 22.216);   /* reddish error */
-	--border: oklch(0.3 0.005 270);             /* subtle card border */
-	--input: oklch(0.3 0.005 270 / 40%);
-	--ring: oklch(0.723 0.231 49.94);           /* orange ring matches primary */
+	--destructive: oklch(0.65 0.18 15);            /* #e46876 - soft red */
+	--border: oklch(0.28 0.01 30);                 /* subtle border */
+	--input: oklch(0.25 0.01 30 / 60%);            /* input with opacity */
+	--ring: oklch(0.72 0.08 220);                  /* matches primary */
   
 	--sidebar: var(--card);
 	--sidebar-foreground: var(--foreground);

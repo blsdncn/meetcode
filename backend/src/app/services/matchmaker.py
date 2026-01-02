@@ -24,9 +24,6 @@ class MatchmakingService:
 
 
     async def _find_problem_id(self, categories: List[str], db: Session) -> int:
-        print("=== FIND_PROBLEM_ID CALLED ===")
-        print("searching for problem ID with categories:", categories)
-        print("\n\n\n______________________________________\n")
         """Find a problem ID based on shared categories with weighted random selection."""
         # If "None" is in categories, include uncategorized problems
         include_uncategorized = "None" in categories
@@ -52,9 +49,7 @@ class MatchmakingService:
             return None
             
         problems = query.all()
-        print(f"Found {len(problems)} problems matching criteria")
         if not problems:
-            print("No problems found! Returning None")
             return None
 
         # Score problems by number of shared categories
@@ -79,25 +74,20 @@ class MatchmakingService:
                 weights.append(max(1, s[1]))
         
         selected = random.choices(scored, weights=weights, k=1)[0][0]
-        print(f"Selected problem: ID={selected.problem_id}, categories={selected.categories}")
         return selected.problem_id
 
     async def create_match(self, pair: Tuple[QueueTicket, QueueTicket], db: Session) -> UUID:
         """Database interaction"""
-        print("=== CREATE_MATCH CALLED ===")
         shared_cats = list(
             set(pair[0].categories) & 
             set(pair[1].categories)
         )
-        print(f"Shared categories: {shared_cats}")
         
         # Get problem ID using the implemented method
         problem_id = await self._find_problem_id(shared_cats, db)
-        print(f"Problem ID from _find_problem_id: {problem_id}")
         
         # Fallback to a default problem if none found
         if problem_id is None:
-            print("WARNING: No problem found for categories, using fallback problem ID 1")
             problem_id = 1
         
         match_data = MatchCreate(
@@ -105,7 +95,6 @@ class MatchmakingService:
             guest_id=pair[1].user_id,
             problem_id=problem_id
         )
-        print(f"Creating match for {pair[0].user_id} and {pair[1].user_id} with problem ID {problem_id}")
         
         db_match = match_service.create_match(db, match_data)
         return db_match.match_id
@@ -114,24 +103,22 @@ class MatchmakingService:
         async with self.queue_lock:
             if user_id not in self.queue:
                 self.queue[user_id] = ticket
-                print(f"Added {user_id} to queue. Queue size: {len(self.queue)}")
+                print(f"[Matchmaker] User {user_id} joined queue (size: {len(self.queue)})")
 
     async def remove_from_queue(self, user_id: UUID):
         async with self.queue_lock:
             if user_id in self.queue:
                 del self.queue[user_id]
-                print(f"Removed {user_id} from queue")
+                print(f"[Matchmaker] User {user_id} left queue")
 
     async def register_connection(self, user_id: UUID, websocket: WebSocket):
         async with self.conn_lock:
             self.connections[user_id] = websocket
-            print(f"Registered connection for {user_id}")
 
     async def unregister_connection(self, user_id: UUID):
         async with self.conn_lock:
             if user_id in self.connections:
                 del self.connections[user_id]
-                print(f"Unregistered connection for {user_id}")
 
     async def find_pairs(self) -> List[Tuple[QueueTicket, QueueTicket]]:
         """Core matching algorithm"""
@@ -167,19 +154,11 @@ class MatchmakingService:
         return pairs
 
     async def notify_match(self, user_id: UUID, match_id: UUID, peer_id: UUID, role: str):
-        print(f"[notify_match] Notifying {user_id} with match {match_id}")
         websocket = None
         async with self.conn_lock:
             websocket = self.connections.get(user_id)
 
         if not websocket:
-            print(f"[notify_match] No websocket found for {user_id}")
-
-        async with self.conn_lock:
-            websocket = self.connections.get(user_id)
-
-        if not websocket:
-            print(f"[notify_match] User {user_id} disconnected before notification")
             return
 
         try:
@@ -191,25 +170,22 @@ class MatchmakingService:
                 "role": role
             })
         except Exception as e:
-            print(f"[notify_match] Failed to notify {user_id}: {e}")
+            print(f"[Matchmaker] Failed to notify user {user_id}: {e}")
         finally:
             await self.unregister_connection(user_id)
 
     async def execute_matchmaking_cycle(self, db: Session):
         """Full matchmaking workflow (run every few seconds)"""
-        print(f"[execute_matchmaking_cycle] Starting cycle, queue size: {len(self.queue)}")
         pairs = await self.find_pairs()
-        print(f"[matchmaker] Pairs found: {len(pairs)}")
         if not pairs:
             return
 
         for pair in pairs:
             host, guest = pair
-            print(f"[execute_matchmaking_cycle] Processing pair: {host.user_id} & {guest.user_id}")
-
+            
             # Create match in DB
             match_id = await self.create_match(pair, db)
-            print(f"[execute_matchmaking_cycle] Created match: {match_id}")
+            print(f"[Matchmaker] Match created: {match_id} (users: {host.user_id}, {guest.user_id})")
 
             # Send signaling info
             await self.notify_match(host.user_id, match_id, guest.user_id, "host")

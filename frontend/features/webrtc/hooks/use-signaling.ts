@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useCallback } from "react"
 
 interface UseSignalingProps {
   enabled: boolean
@@ -12,6 +12,7 @@ interface UseSignalingProps {
   createAnswer: (offer: RTCSessionDescriptionInit) => Promise<RTCSessionDescriptionInit>
   setRemoteDescription: (desc: RTCSessionDescriptionInit) => Promise<void>
   addIceCandidate: (candidate: RTCIceCandidateInit) => Promise<void>
+  onMatchEnded?: (reason: string) => void
 }
 
 export function useSignaling({
@@ -24,8 +25,16 @@ export function useSignaling({
   createAnswer,
   setRemoteDescription,
   addIceCandidate,
+  onMatchEnded,
 }: UseSignalingProps) {
   const socketRef = useRef<WebSocket | null>(null)
+
+  // Send end match signal to peer
+  const sendEndMatch = useCallback(() => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ event: "end_match" }))
+    }
+  }, [])
 
   useEffect(() => {
     if (!enabled || !matchId || !peerId || !peerConnection) return
@@ -34,13 +43,11 @@ export function useSignaling({
     const { protocol, host } = window.location
     const wsBase = protocol === "https:" ? "wss" : "ws"
     const socketUrl = `${wsBase}://${host}/ws/signaling/match/${matchId}`
-    console.log("📡 Connecting to signaling server:", socketUrl)
 
     const socket = new WebSocket(socketUrl)
     socketRef.current = socket
 
     socket.onopen = () => {
-      console.log("✅ WebSocket signaling connected")
       socket.send(
         JSON.stringify({
           event: "client_ready",
@@ -55,7 +62,6 @@ export function useSignaling({
         const data = JSON.parse(event.data)
 
         if (data.event === "room_ready") {
-          console.log("✅ Room is ready")
           if (role === "host") {
             const offer = await createOffer()
             socket.send(JSON.stringify({ type: "offer", sdp: offer.sdp }))
@@ -63,33 +69,28 @@ export function useSignaling({
           return
         }
 
+        // Handle match ended by peer
+        if (data.event === "match_ended") {
+          onMatchEnded?.(data.reason || "peer_ended")
+          return
+        }
+
         if (data.type === "offer" && role === "guest") {
-          console.log("📨 Received offer")
           await setRemoteDescription({ type: "offer", sdp: data.sdp })
           const answer = await createAnswer({ type: "offer", sdp: data.sdp })
           socket.send(JSON.stringify({ type: "answer", sdp: answer.sdp }))
         }
 
         if (data.type === "answer" && role === "host") {
-          console.log("📨 Received answer")
           await setRemoteDescription({ type: "answer", sdp: data.sdp })
         }
 
         if (data.type === "ice-candidate") {
-          console.log("📨 Received ICE candidate")
           await addIceCandidate(data.candidate)
         }
       } catch (err) {
-        console.error("❌ Failed to process signaling message:", err)
+        console.error("Failed to process signaling message:", err)
       }
-    }
-
-    socket.onerror = (err) => {
-      console.warn("⚠️ WebSocket error (non-blocking):", err)
-    }
-
-    socket.onclose = () => {
-      console.log("🔌 WebSocket closed")
     }
 
     peerConnection.onicecandidate = (event) => {
@@ -117,5 +118,8 @@ export function useSignaling({
     createAnswer,
     setRemoteDescription,
     addIceCandidate,
+    onMatchEnded,
   ])
+
+  return { sendEndMatch }
 }

@@ -108,8 +108,21 @@ export default function VideoWindow({ matchId, peerId, role }: { matchId: string
     role,
   })
 
+  // Handle when match is ended by peer
+  const handleMatchEnded = (reason: string) => {
+    const message = reason === "peer_ended" 
+      ? "Your partner ended the session" 
+      : "Your partner disconnected"
+    setStatusMessage(message)
+    setPeerLeft(true)
+    
+    setTimeout(() => {
+      window.location.href = "/dashboard"
+    }, 3000)
+  }
+
   // ✅ Set up signaling only after device selection is done
-  useSignaling({
+  const { sendEndMatch } = useSignaling({
     enabled: !isDeviceSelectionOpen && !!peerConnection,
     matchId,
     peerId,
@@ -132,19 +145,28 @@ export default function VideoWindow({ matchId, peerId, role }: { matchId: string
     addIceCandidate: async (candidate) => {
       await peerConnection!.addIceCandidate(new RTCIceCandidate(candidate))
     },
+    onMatchEnded: handleMatchEnded,
   })
+
+  // Handle hang up - notify peer first, then close connection
+  const handleHangUp = () => {
+    sendEndMatch()
+    hangUp()
+  }
 
   // Update connection status message
   useEffect(() => {
     if (connectionState === "disconnected" || connectionState === "failed" || connectionState === "closed") {
-      setStatusMessage("Peer has left the call")
-      setPeerLeft(true)
+      if (!peerLeft) {
+        setStatusMessage("Connection lost")
+        setPeerLeft(true)
 
-      setTimeout(() => {
-        window.location.href = "/matchmaking"
-      }, 3000)
+        setTimeout(() => {
+          window.location.href = "/dashboard"
+        }, 3000)
+      }
     }
-  }, [connectionState])
+  }, [connectionState, peerLeft])
 
   // Handle device selection
   const handleDeviceSelect = (kind: "videoinput" | "audioinput", deviceId: string) => {
@@ -211,7 +233,7 @@ export default function VideoWindow({ matchId, peerId, role }: { matchId: string
                   peerLeft={peerLeft}
                   onToggleAudio={toggleAudio}
                   onToggleVideo={toggleVideo}
-                  onHangUp={hangUp}
+                  onHangUp={handleHangUp}
                 />
               </div>
               
@@ -220,9 +242,6 @@ export default function VideoWindow({ matchId, peerId, role }: { matchId: string
                 <CollaborativeEditor
                   matchId={matchId}
                   dataChannel={dataChannel}
-                  onCodeChange={(code) => {
-                    console.log("Code updated:", code.length, "characters")
-                  }}
                 />
               </div>
             </div>

@@ -54,8 +54,6 @@ interface MatchHistoryProps {
 }
 
 export default function MatchHistory({ matchHistory }: MatchHistoryProps) {
-  console.log("matchHistory prop:", matchHistory);
-
   if (!matchHistory || matchHistory.length === 0) {
     return <p className="text-white">No matches to show.</p>;
   }
@@ -69,7 +67,7 @@ export default function MatchHistory({ matchHistory }: MatchHistoryProps) {
             <Card key={match.match_id} className="bg-[#3B3F46] text-white px-4 py-2">
               <CardContent className="p-2 text-sm space-y-1">
                 <div>Problem ID: {match.problem?.problem_id ?? 'Unknown'}</div>
-                <div>Status: {match.status ? 'Pass' : 'Fail'}</div>
+                <div className="text-green-400">Status: Finished</div>
                 <div>Categories: {match.problem?.categories?.join(', ') || 'N/A'}</div>
               </CardContent>
             </Card>

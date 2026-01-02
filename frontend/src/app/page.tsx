@@ -3,8 +3,12 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import { useSession } from 'next-auth/react';
 
 export default function Home() {
+	const { data: session, status } = useSession();
+	const isLoggedIn = status === 'authenticated' && !!session;
+
 	return (
 		<main className="flex flex-col items-center justify-center text-center min-h-screen px-6">
             <div className="relative w-28 h-28 mb-4 animate-spin-slow">
@@ -25,8 +29,8 @@ export default function Home() {
 			</p>
 
 			<div className="flex gap-4 mb-10">
-				<Link href="/signup">
-					<Button size="lg">Get Started</Button>
+				<Link href={isLoggedIn ? "/dashboard" : "/signup"}>
+					<Button size="lg">{isLoggedIn ? "Go to Dashboard" : "Get Started"}</Button>
 				</Link>
 				<Link href="/about">
 					<Button variant="outline" size="lg">Learn More</Button>
@@ -38,13 +42,11 @@ export default function Home() {
 				<ul className="text-left text-sm md:text-base space-y-2 list-disc list-inside text-muted-foreground">
 					<li>Select your programming language and problem type</li>
 					<li>Get instantly paired with someone compatible</li>
-					<li>Code together, solve problems, or skip to the next</li>
-                    <li>Unsatisfied with your pair? Optionally leave a user review and comment.</li>
+					<li>Code together, solve problems, and grow together</li>
 				</ul>
 			</div>
 
             <p className="text-sm text-muted-foreground mt-10">Built with Python, Next.js, Tailwind CSS, FastAPI, PostgreSQL, and ❤️</p>
-            < br/>
 		</main>
 	);
 }
