@@ -6,7 +6,10 @@ This document contains attribution and license information for third-party softw
 
 ## Kanagawa Color Palette
 
-The application's color scheme is inspired by the Kanagawa color palette.
+The application uses the exact Kanagawa Neovim palettes:
+
+- **Kanagawa Lotus (Light Mode)** — exact terminal palette values
+- **Kanagawa Dragon (Dark Mode)** — exact terminal palette values
 
 **Source:** https://github.com/rebelot/kanagawa.nvim
 
