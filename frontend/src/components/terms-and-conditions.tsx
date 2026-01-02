@@ -3,6 +3,14 @@
 import React from "react";
 import { useInView } from "react-intersection-observer";
 
+// Dynamic site URL - uses current origin in browser, fallback for SSR
+const getSiteUrl = () => {
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  return "https://meetcode.com"; // Fallback for SSR
+};
+
 const Section = ({
   title,
   children,
@@ -26,6 +34,12 @@ const Section = ({
 };
 
 export function TermsAndConditions() {
+  const [siteUrl, setSiteUrl] = React.useState("https://meetcode.com");
+
+  React.useEffect(() => {
+    setSiteUrl(getSiteUrl());
+  }, []);
+
   return (
     <section className="px-4 py-10 md:px-8 md:py-16 lg:py-20 text-foreground">
       <div className="mx-auto max-w-4xl space-y-12 text-sm text-left leading-relaxed">
@@ -55,7 +69,7 @@ export function TermsAndConditions() {
             <li><strong>Service</strong> refers to the website.</li>
             <li><strong>Terms and conditions</strong> means these terms...</li>
             <li><strong>Third-party social media service</strong> means services provided by a third-party...</li>
-            <li><strong>Website</strong> refers to MeetCode, accessible from http://localhost:3000</li>
+            <li><strong>Website</strong> refers to MeetCode, accessible from {siteUrl}</li>
             <li><strong>you</strong> means the individual accessing or using the service...</li>
           </ul>
         </Section>
@@ -108,7 +122,7 @@ export function TermsAndConditions() {
           </p>
         </Section>
 
-        <Section title="“As Is” and “As Available” Disclaimer">
+        <Section title={'"As Is" and "As Available" Disclaimer'}>
           <p>
             The service is provided to you &quot;as is&quot; and &quot;as available&quot; with all faults and without warranty. We make no representations that the service will meet your needs, be uninterrupted, or be free from errors or harmful components.
           </p>
@@ -169,10 +183,10 @@ export function TermsAndConditions() {
             <li>
               {" "}
               <a
-                href="http://localhost:3000/contact"
+                href={`${siteUrl}/about/contact`}
                 className="text-blue-500 underline hover:text-blue-400"
               >
-                http://localhost:3000/contact
+                {siteUrl}/about/contact
               </a>
             </li>
           </ul>
