@@ -37,14 +37,12 @@ function Navbar() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <ThemeSwitcherButton />
           {session ? (
-            <div className="transform translate-y-[-8px]">
-              <Button onClick={handleLogout} variant="outline">
-                Log out
-              </Button>
-            </div>
+            <Button onClick={handleLogout} variant="outline">
+              Log out
+            </Button>
           ) : (
             <>
               <Button asChild>
@@ -85,7 +83,7 @@ function NavbarItem({ link, label, dropdownItems, clickCallBack }: NavbarItemPro
           className={cn(
             buttonVariants({ variant: 'ghost' }),
             'text-lg text-muted-foreground hover:text-foreground',
-            isActive && 'text-amber-500'
+            isActive && 'text-decorator'
           )}
           onClick={() => {
             if (dropdownItems) {
@@ -99,7 +97,7 @@ function NavbarItem({ link, label, dropdownItems, clickCallBack }: NavbarItemPro
         </Link>
       </div>
       {isActive && !dropdownItems && (
-        <div className="absolute -bottom-[2px] left-1/2 hidden h-[5px] w-[80%] -translate-x-1/2 rounded-xl bg-amber-500 md:block" />
+        <div className="absolute -bottom-[2px] left-1/2 hidden h-[5px] w-[80%] -translate-x-1/2 rounded-xl bg-decorator md:block" />
       )}
     </div>
   );

@@ -53,7 +53,7 @@ export function CheckboxGroup({ title, options, idPrefix, onSelectionChange }: C
                   <span className="text-sm truncate flex-1 text-left">
                     {option}
                     {/* Tooltip that appears on hover with delay but disappears quickly */}
-                    <span className="absolute left-7 top-6 scale-0 transition-all rounded bg-black/80 p-1 text-xs text-white group-hover:scale-100 group-hover:delay-600 delay-0 z-50 max-w-[200px] whitespace-normal break-words">
+                    <span className="absolute left-7 top-6 scale-0 transition-all rounded bg-popover p-1 text-xs text-popover-foreground border border-border group-hover:scale-100 group-hover:delay-600 delay-0 z-50 max-w-[200px] whitespace-normal break-words shadow-md">
                       {option}
                     </span>
                   </span>
