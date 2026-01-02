@@ -8,7 +8,9 @@ import DeviceSelection from "./device-selection"
 import VideoCall from "./video-call"
 import LeetCodeProblemCard from "./leetcode-problem-card"
 import api from "@/lib/api"
-import { API_HOST_BASE_URL } from "@/lib/constants"
+
+// FIXED: Removed API_HOST_BASE_URL to prevent double /api/api/ paths
+// The api client already has baseURL: '/api/', so paths should be relative
 
 // LeetCode problem interface
 export interface LeetCodeProblem {
@@ -44,7 +46,7 @@ export default function VideoWindow({ matchId, peerId, role }: { matchId: string
         setProblemError(null)
         
         // First, get match details to get the problem_id
-        const matchResponse = await api.get(`${API_HOST_BASE_URL}match/details/${matchId}`)
+        const matchResponse = await api.get(`match/details/${matchId}`)
         const matchData = matchResponse.data
         
         if (!matchData) {
@@ -58,7 +60,7 @@ export default function VideoWindow({ matchId, peerId, role }: { matchId: string
         }
         
         // Then fetch the problem details
-        const problemResponse = await api.get(`${API_HOST_BASE_URL}problem/${problemId}`)
+        const problemResponse = await api.get(`problem/${problemId}`)
         const problemData = problemResponse.data
         
         // Transform backend data to frontend LeetCode problem format

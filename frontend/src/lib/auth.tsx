@@ -1,10 +1,9 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { BACKEND_API_URL } from '@/lib/constants';
 import GitHubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
-import api from './api';
 
 declare module 'next-auth' {
   interface User {
@@ -30,10 +29,11 @@ declare module 'next-auth/jwt' {
 }
 
 // Helper function for token refresh - extracted for clarity
+// Uses direct axios instead of api client to avoid baseURL conflicts in server-side context
 async function refreshAccessToken(token: any) {
   try {
     console.log("Attempting token refresh for:", token.sub);
-    const response = await api.post(`${BACKEND_API_URL}user-auth/refresh`, {
+    const response = await axios.post(`${BACKEND_API_URL}user-auth/refresh`, {
       refresh_token: token.refreshToken,
     });
 
@@ -84,7 +84,7 @@ export const authOptions: NextAuthOptions = {
           data.append("username", credentials.username);
           data.append("password", credentials.password);
 
-          const response = await api.post(`${BACKEND_API_URL}user-auth/token`, data, {
+          const response = await axios.post(`${BACKEND_API_URL}user-auth/token`, data, {
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
             },
@@ -151,7 +151,7 @@ export const authOptions: NextAuthOptions = {
 
           return false;
         } catch (err) {
-            const error = err as import("axios").AxiosError;
+            const error = err as AxiosError;
           
             const data = error.response?.data as { msg?: string };
           
@@ -228,7 +228,7 @@ export const authOptions: NextAuthOptions = {
     async signOut({ token }) {
       try {
         if (token?.refreshToken) {
-          await api.post(`${BACKEND_API_URL}user-auth/logout`, {
+          await axios.post(`${BACKEND_API_URL}user-auth/logout`, {
             refresh_token: token.refreshToken,
           });
           console.log('Tokens revoked successfully');

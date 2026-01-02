@@ -55,7 +55,7 @@ export default function Matchmaking() {
 
   // Fetch categories from API
   useEffect(() => {
-      api.get("/api/problem/tags")
+      api.get("/problem/tags")
         .then((res) => setCategories(res.data.tags || []))
         .catch(() => setCategories([]))
   }, [])
@@ -114,13 +114,16 @@ export default function Matchmaking() {
       
       console.log("Using token for WebSocket connection:", token);
       
-      // Derive WebSocket URL from current location - no more hardcoded URLs
-      //const { protocol, host } = window.location
-      //const wsBase = protocol === "https:" ? "wss" : "ws"
+      // Derive WebSocket URL from current location with explicit protocol
+      // Using explicit wss/ws protocol for maximum browser compatibility
+      const { protocol, host } = window.location;
+      const wsProtocol = protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${wsProtocol}//${host}/ws/queue`;
       
-      // Create WebSocket connection with relative path
-      const socket = new WebSocket(`/ws/queue`);
+      // Create WebSocket connection with explicit URL
+      const socket = new WebSocket(wsUrl);
       socketRef.current = socket; // Store reference for cancellation
+      console.log("Connecting to WebSocket:", wsUrl);
       
       //console.log("Attempting WebSocket connection to:", `${protocol}://${host}/ws/connect`);
 

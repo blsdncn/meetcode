@@ -1,15 +1,22 @@
 /**
  * Centralized API client for Meetcode
  * 
- * All API calls should use this client to ensure:
- * - Consistent authentication header injection
- * - Automatic token refresh handling
- * - Unified error handling
+ * IMPORTANT: This client has baseURL: '/api/', so all paths must be RELATIVE.
+ * Do NOT include '/api/' prefix in your paths - it will be added automatically.
  * 
- * Usage:
- *   import api from '@/lib/api';
- *   const response = await api.get('/user-auth/me');
- *   const data = await api.post('/reviews/', reviewData);
+ * Examples:
+ *   ✅ CORRECT:   api.get('user-auth/me')
+ *   ✅ CORRECT:   api.post('reviews/', data)
+ *   ❌ WRONG:     api.get('/api/user-auth/me')     // Creates /api/api/user-auth/me
+ *   ❌ WRONG:     api.get(`${BACKEND_API_URL}...`) // Creates /api/http://...
+ * 
+ * All requests automatically include:
+ * - Authentication headers (from NextAuth session)
+ * - Error handling with automatic sign-out on 401
+ * - Unified error message extraction via getApiErrorMessage()
+ * 
+ * For server-side NextAuth callbacks, use direct axios imports instead
+ * (see frontend/src/lib/auth.tsx for examples).
  */
 
 import axios, { AxiosError } from 'axios';
