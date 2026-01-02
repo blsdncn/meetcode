@@ -37,7 +37,7 @@ export default function Home() {
 				</Link>
 			</div>
 
-			<div className="w-full max-w-4xl rounded-lg shadow-md border border-border p-6 bg-background">
+			<div className="w-full max-w-4xl rounded-lg border-[3px] border-border p-6 bg-background">
 				<h2 className="text-xl font-semibold mb-2">How it works</h2>
 				<ul className="text-left text-sm md:text-base space-y-2 list-disc list-inside text-muted-foreground">
 					<li>Select your programming language and problem type</li>

@@ -77,18 +77,23 @@
 	--muted: 54 48% 80.4%;
 	--muted-foreground: 0 0.8% 48.2%;
   
-	--accent: 54 48% 80.4%;
-	--accent-foreground: 240 8.7% 36.1%;
+	--accent: 218 34% 45%;
+	--accent-foreground: 53 67.5% 84.3%;
   
 	--destructive: 358 64.7% 55.3%;
 	--destructive-foreground: 53 67.5% 84.3%;
   
-	--border: 52 42.2% 76.1%;
+	--border: 240 9% 36%;
 	--input: 52 44.4% 78.4%;
 	--ring: 210 41% 57.5%;
   
 	/* NVIM syntax colors */
-	--decorator: 30 100% 40%;
+	--decorator: 32 100% 40%;
+  
+	/* Checkbox colors */
+	--checkbox-bg: 53 67.5% 84.3%;
+	--checkbox-border: 210 41% 57%;
+	--checkbox-checked: 210 41% 57%;
   
 	/* Chart colors - Lotus */
 	--chart-1: 210 41% 57.5%;
@@ -134,7 +139,7 @@
 	--destructive: 353 69.7% 65.1%;
 	--destructive-foreground: 0 4.3% 9%;
   
-	--border: 30 4% 37%;
+	--border: 120 4% 78%;
 	--input: 0 1% 15%;
 	--ring: 198 41.4% 64.5%;
   

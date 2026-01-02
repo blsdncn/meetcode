@@ -9,14 +9,14 @@ function Logo() {
 		>
 			<Image
 				src="/meet2code.png"
-				alt="Meet2Code Logo"
+				alt="MeetCode Logo"
 				width={44}
 				height={44}
 				className="rounded-full"
 			/>
 			<p
 				className={
-					'bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-3xl leading-tight text-transparent'
+					'bg-gradient-to-r from-[hsl(var(--decorator))] to-[hsl(var(--decorator))] bg-clip-text text-3xl leading-tight text-transparent'
 				}
 			>
 				MeetCode

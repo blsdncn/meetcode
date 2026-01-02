@@ -82,7 +82,7 @@ function NavbarItem({ link, label, dropdownItems, clickCallBack }: NavbarItemPro
           href={dropdownItems ? '#' : link}
           className={cn(
             buttonVariants({ variant: 'ghost' }),
-            'text-lg text-muted-foreground hover:text-foreground',
+            'text-lg text-muted-foreground hover:text-[hsl(52,37%,73%)] dark:hover:text-[hsl(120,4%,78%)]',
             isActive && 'text-decorator'
           )}
           onClick={() => {

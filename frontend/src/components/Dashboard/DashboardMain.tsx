@@ -78,7 +78,7 @@ export default function DashboardMain() {
           <Link href="/matchmaking">
             <Button
               size="lg"
-              className="bg-accent hover:bg-accent/80 text-accent-foreground text-3xl font-extrabold px-20 py-8 rounded-2xl shadow-xl"
+              className="text-3xl font-extrabold px-20 py-8 rounded-2xl"
             >
               Find Match
             </Button>
