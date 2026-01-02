@@ -2,6 +2,16 @@
 const nextConfig = {
   output: "standalone",
   reactStrictMode: true,
+  webpack: (config, { isServer }) => {
+    // Handle Monaco Editor workers
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+      };
+    }
+    return config;
+  },
   // Removed rewrites since we're using Nginx for routing
   // async rewrites() {
   //   return [
