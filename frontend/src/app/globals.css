@@ -68,7 +68,7 @@
 	--popover: 52 68.6% 86.3%;
 	--popover-foreground: 240 8.7% 36.1%;
   
-	--primary: 210 41% 57.5%;
+	--primary: 218 34% 45%;
 	--primary-foreground: 53 67.5% 84.3%;
   
 	--secondary: 54 48% 80.4%;
@@ -85,18 +85,18 @@
   
 	--border: 240 9% 36%;
 	--input: 52 44.4% 78.4%;
-	--ring: 210 41% 57.5%;
+	--ring: 218 34% 45%;
   
 	/* NVIM syntax colors */
 	--decorator: 32 100% 40%;
   
 	/* Checkbox colors */
 	--checkbox-bg: 53 67.5% 84.3%;
-	--checkbox-border: 210 41% 57%;
-	--checkbox-checked: 210 41% 57%;
+	--checkbox-border: 218 34% 45%;
+	--checkbox-checked: 218 34% 45%;
   
 	/* Chart colors - Lotus */
-	--chart-1: 210 41% 57.5%;
+	--chart-1: 218 34% 45%;
 	--chart-2: 39 27% 40%;
 	--chart-3: 358 64.7% 55.3%;
 	--chart-4: 91 27.4% 42.2%;
