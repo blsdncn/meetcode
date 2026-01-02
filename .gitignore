@@ -101,3 +101,9 @@ dockerstuff/
 
 # Allow certificate generation scripts
 !**/init_certs.sh
+
+# Development notes and temporary fix summaries
+*-SUMMARY.md
+*-FIX-*.md
+*-MIGRATION.md
+reviews-*.md
