@@ -103,7 +103,7 @@ dockerstuff/
 !**/init_certs.sh
 
 # Development notes and temporary fix summaries
-*-SUMMARY.md
-*-FIX-*.md
-*-MIGRATION.md
+*SUMMARY.md
+*FIX-*.md
+*MIGRATION.md
 reviews-*.md
