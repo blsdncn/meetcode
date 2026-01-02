@@ -1,6 +1,7 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import axios, { AxiosError } from 'axios';
+import { AxiosError } from 'axios';
+import { serverAxios as axios } from '@/lib/server-axios';
 import { BACKEND_API_URL } from '@/lib/constants';
 import GitHubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";

@@ -114,11 +114,19 @@ export default function Matchmaking() {
       
       console.log("Using token for WebSocket connection:", token);
       
-      // Derive WebSocket URL from current location with explicit protocol
-      // Using explicit wss/ws protocol for maximum browser compatibility
-      const { protocol, host } = window.location;
-      const wsProtocol = protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${wsProtocol}//${host}/ws/queue`;
+      // Derive WebSocket URL
+      // In development (local npm run dev), use nginx at wss://localhost
+      // In production (Docker), use current location
+      let wsUrl: string;
+      if (process.env.NODE_ENV === 'development') {
+        // Local dev: connect through nginx
+        wsUrl = "wss://localhost/ws/queue";
+      } else {
+        // Production: use current location
+        const { protocol, host } = window.location;
+        const wsProtocol = protocol === "https:" ? "wss:" : "ws:";
+        wsUrl = `${wsProtocol}//${host}/ws/queue`;
+      }
       
       // Create WebSocket connection with explicit URL
       const socket = new WebSocket(wsUrl);
@@ -180,10 +188,10 @@ export default function Matchmaking() {
   }, [closeWebSocket])
 
   return (
-    <div className="min-h-screen bg-background text-white flex flex-col items-center p-4">
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4">
       <h2 className="text-xl font-bold mb-4">Matchmaking - Select Preferences</h2>
 
-      <Card className="w-full max-w-5xl p-6 bg-card rounded-xl shadow-md">
+      <Card className="w-full max-w-5xl p-6">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Programming Languages Card */}
           <CheckboxGroup

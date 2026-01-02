@@ -22,10 +22,21 @@
 import axios, { AxiosError } from 'axios';
 import { getSession, signOut } from 'next-auth/react';
 
-// Create axios instance with relative base URL
-// All requests go through Nginx proxy which routes to backend
+// Create axios instance with base URL
+// In development (local npm run dev), use nginx at https://localhost
+// In production (Docker), use relative URLs which go through nginx
+const getBaseURL = () => {
+  // If running locally (not in Docker), use nginx directly
+  if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+    // Client-side: use nginx
+    return 'https://localhost/api/';
+  }
+  // Server-side or Docker: use relative URL
+  return '/api/';
+};
+
 const api = axios.create({
-  baseURL: '/api/',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },

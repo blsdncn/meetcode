@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useUserMedia } from "../hooks/use-user-media"
 import { useWebRTC } from "../hooks/use-webrtc"
 import { useSignaling } from "../hooks/use-signaling"
@@ -117,8 +117,8 @@ export default function VideoWindow({ matchId, peerId, role }: { matchId: string
     setPeerLeft(true)
     
     setTimeout(() => {
-      window.location.href = "/dashboard"
-    }, 3000)
+      window.location.href = "/matchmaking"
+    }, 2000) // Reduced delay for better UX
   }
 
   // ✅ Set up signaling only after device selection is done
@@ -149,21 +149,57 @@ export default function VideoWindow({ matchId, peerId, role }: { matchId: string
   })
 
   // Handle hang up - notify peer first, then close connection
-  const handleHangUp = () => {
+  const handleHangUp = async () => {
+    // Send end match signal to peer
     sendEndMatch()
+    // Give the WebSocket a moment to send the message before closing
+    await new Promise(resolve => setTimeout(resolve, 100))
     hangUp()
   }
 
+  // Track if connection was ever successfully established
+  const wasConnectedRef = useRef(false)
+  const disconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   // Update connection status message
   useEffect(() => {
-    if (connectionState === "disconnected" || connectionState === "failed" || connectionState === "closed") {
+    // Track when connection is successfully established
+    if (connectionState === "connected") {
+      wasConnectedRef.current = true
+      // Clear any pending disconnect timeout
+      if (disconnectTimeoutRef.current) {
+        clearTimeout(disconnectTimeoutRef.current)
+        disconnectTimeoutRef.current = null
+      }
+    }
+
+    // Only handle disconnection if we were previously connected
+    // "disconnected" state during ICE negotiation is normal and temporary
+    if (connectionState === "failed" || connectionState === "closed") {
       if (!peerLeft) {
         setStatusMessage("Connection lost")
         setPeerLeft(true)
 
         setTimeout(() => {
-          window.location.href = "/dashboard"
-        }, 3000)
+          window.location.href = "/matchmaking"
+        }, 2000)
+      }
+    } else if (connectionState === "disconnected" && wasConnectedRef.current && !peerLeft) {
+      // Only start a timeout for disconnected state if we were previously connected
+      // This handles temporary network issues vs permanent disconnection
+      disconnectTimeoutRef.current = setTimeout(() => {
+        setStatusMessage("Connection lost")
+        setPeerLeft(true)
+
+        setTimeout(() => {
+          window.location.href = "/matchmaking"
+        }, 2000)
+      }, 5000) // Wait 5 seconds before treating disconnected as permanent
+    }
+
+    return () => {
+      if (disconnectTimeoutRef.current) {
+        clearTimeout(disconnectTimeoutRef.current)
       }
     }
   }, [connectionState, peerLeft])
