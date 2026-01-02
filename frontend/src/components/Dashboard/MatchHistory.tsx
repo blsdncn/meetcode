@@ -55,19 +55,19 @@ interface MatchHistoryProps {
 
 export default function MatchHistory({ matchHistory }: MatchHistoryProps) {
   if (!matchHistory || matchHistory.length === 0) {
-    return <p className="text-white">No matches to show.</p>;
+    return <p className="text-muted-foreground">No matches to show.</p>;
   }
 
   return (
-    <Card className="bg-[#2A2E34] p-4 h-full min-h-[450px] overflow-y-auto">
+    <Card className="p-4 h-full min-h-[450px] overflow-y-auto">
       <CardContent className="space-y-3">
-        <h2 className="text-xl font-semibold text-center text-white mb-4">Match History</h2>
+        <h2 className="text-xl font-semibold text-center text-card-foreground mb-4">Match History</h2>
         <div className="space-y-2">
           {matchHistory.map((match) => (
-            <Card key={match.match_id} className="bg-[#3B3F46] text-white px-4 py-2">
+            <Card key={match.match_id} className="px-4 py-2">
               <CardContent className="p-2 text-sm space-y-1">
                 <div>Problem ID: {match.problem?.problem_id ?? 'Unknown'}</div>
-                <div className="text-green-400">Status: Finished</div>
+                <div className="text-primary">Status: Finished</div>
                 <div>Categories: {match.problem?.categories?.join(', ') || 'N/A'}</div>
               </CardContent>
             </Card>

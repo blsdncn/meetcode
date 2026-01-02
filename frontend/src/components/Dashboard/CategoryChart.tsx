@@ -3,7 +3,8 @@
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
-const COLORS = ["#FED7AA", "#FDBA74", "#FB923C", "#F97316", "#EA580C"];
+// Theme-aware colors that work in both light and dark modes
+const COLORS = ["#7fb4ca", "#e6c384", "#e46876", "#76946a", "#957fb8"];
 
 interface CategoryChartProps {
     categories: { name: string; value: number }[];
@@ -11,9 +12,9 @@ interface CategoryChartProps {
   
 export default function CategoryChart({ categories }: CategoryChartProps) {
   return (
-    <Card className="bg-[#2A2E34] text-white">
+    <Card className="text-card-foreground">
       <CardHeader>
-        <h2 className="text-2xl font-bold"> Problem Categories</h2>
+        <h2 className="text-2xl font-bold">Problem Categories</h2>
       </CardHeader>
       
       <CardContent className="h-[320px]">
@@ -36,7 +37,7 @@ export default function CategoryChart({ categories }: CategoryChartProps) {
                   <text
                     x={xPos}
                     y={yPos}
-                    fill="#fff"
+                    className="fill-foreground"
                     fontSize={16}
                     textAnchor={xPos > cx ? 'start' : 'end'}
                     dominantBaseline="central"
@@ -52,15 +53,15 @@ export default function CategoryChart({ categories }: CategoryChartProps) {
             </Pie>
             <Tooltip
              contentStyle={{
-             backgroundColor: "#3B3F46",
-             border: "1px solid #4A4F55",
+             backgroundColor: "hsl(var(--popover))",
+             border: "1px solid hsl(var(--border))",
              borderRadius: "8px",
-             color: "#fff",
+             color: "hsl(var(--popover-foreground))",
              fontSize: "13px",
              padding: "10px",
                 }}
-            labelStyle={{ color: "#fff" }} 
-            itemStyle={{ color: "#fff" }}  
+            labelStyle={{ color: "hsl(var(--popover-foreground))" }} 
+            itemStyle={{ color: "hsl(var(--popover-foreground))" }}  
             formatter={(value, name) => [`${value} problems`, `${name}`]}
             />
           </PieChart>

@@ -37,12 +37,12 @@ export default function DashboardMain() {
   );
 
   if (status === "loading") {
-    return <p className="text-white text-center mt-10">Loading...</p>;
+    return <p className="text-foreground text-center mt-10">Loading...</p>;
   }
 
   if (status === "unauthenticated") {
     return (
-      <p className="text-red-500 text-center mt-10">
+      <p className="text-destructive text-center mt-10">
         Please sign in to view your dashboard.
       </p>
     );
@@ -50,15 +50,15 @@ export default function DashboardMain() {
 
   if (loading) {
     return (
-      <p className="text-white text-center mt-10">Loading dashboard...</p>
+      <p className="text-foreground text-center mt-10">Loading dashboard...</p>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#1E2328] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <main className="container mx-auto p-6">
         <h2 className="text-2xl md:text-3xl font-semibold mb-6 text-center md:text-left">
-          Welcome, <span className="text-orange-400">{username || 'User'}</span>
+          Welcome, <span className="text-accent">{username || 'User'}</span>
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -78,7 +78,7 @@ export default function DashboardMain() {
           <Link href="/matchmaking">
             <Button
               size="lg"
-              className="bg-[#F67E21] hover:bg-orange-600 text-white text-3xl font-extrabold px-20 py-8 rounded-2xl shadow-xl"
+              className="bg-accent hover:bg-accent/80 text-accent-foreground text-3xl font-extrabold px-20 py-8 rounded-2xl shadow-xl"
             >
               Find Match
             </Button>
