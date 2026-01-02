@@ -1,35 +1,79 @@
-version: '3.8'
+# Meetcode Docker Compose Configuration
+# 
+# Before running, ensure you have:
+# 1. Created .env.runtime files (see .env.example templates)
+# 2. Generated SSL certificates: ./init_certs.sh
+#
+# Usage:
+#   docker-compose up -d --build
 
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: meetcode-postgres
+    restart: unless-stopped
+    expose:
+      - "5432"  # Internal only, not exposed to host
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password required - set in .env or environment}
+      POSTGRES_DB: ${POSTGRES_DB:-meetcode}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
-    build: ./backend
-    container_name: fastapi_app
-    volumes:
-      - ./backend:/app
-    working_dir: /app
-    environment:
-      - PYTHONPATH=/app/src
-    ports:
-      - "8000:8000"
-    networks:
-      - app-network
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: meetcode-backend
+    restart: unless-stopped
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
     env_file:
-      - ./backend/.env
-      
-  frontend:
-    build: ./frontend
-    container_name: nextjs_app
-    volumes:
-      - ./frontend:/app
-    ports:
-      - "3000:3000"
+      - ./backend/.env.runtime
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    entrypoint: ["./entrypoint-http.sh"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: meetcode-frontend
+    restart: unless-stopped
+    expose:
+      - "3000"
     depends_on:
       - backend
-    networks:
-      - app-network
+    env_file:
+      - ./frontend/.env.runtime
 
-networks:
-  app-network:
-    driver: bridge
+  nginx:
+    image: nginx:alpine
+    container_name: meetcode-proxy
+    restart: unless-stopped
+    volumes:
+      - ./reverse-proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./reverse-proxy/certs:/etc/nginx/certs:ro
+    ports:
+      - "443:443"
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  postgres_data:

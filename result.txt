@@ -1,0 +1,2175 @@
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/.gitignore ---
+  10: 
+  11: # production
+  12: /build
+----------------------------------------
+  16: 
+  17: # Environment variables for different environments
+  18: # Ignore all env files by default
+  19: *.env
+  20: 
+  21: # Track production env files (safe for public consumption)
+  22: !**/.env.production
+  23: 
+  24: # Still ignore secrets
+  25: frontend/.env.runtime
+  26: backend/.env.runtime
+  27: 
+----------------------------------------
+  39: 
+  40: # Virtual environments
+  41: .venv/
+  42: venv/
+  43: 
+----------------------------------------
+  49: 
+  50: # Dependency caches
+  51: pip-wheel-metadata/
+----------------------------------------
+  77: 
+  78: # Environment files
+  79: # TODO, uncomment once people understand, jsut gonna make this dev easier
+  80: 
+----------------------------------------
+  83: 
+  84: *.session.sql
+  85: backend/test.db
+  86: dockerstuff/
+  87: 
+----------------------------------------
+
+=== /home/blaise/Dev/compe561/leetcode-study-partner/.dockerignore ===
+# Ignore the dockerstuff directory
+dockerstuff/
+node_modules
+.env*
+.git
+!frontend/.env.production
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/README.md ---
+  16: 
+  17: - 🐳 [Docker](https://www.docker.com/products/docker-desktop/)
+  18: - 📦 [Node.js & NPM](https://nodejs.org/)
+----------------------------------------
+  33: ```bash
+  34: docker compose up -d
+  35: ```
+----------------------------------------
+  36: 
+  37: ### Shutdown docker image
+  38: 
+----------------------------------------
+  39: ```bash
+  40: docker compose down -v
+  41: ```
+----------------------------------------
+  44: ```bash
+  45: docker-compose down -v
+  46: docker-compose up
+  47: hatch run dev  # Run to initialize database (hatch run dev), then close it after running scripts
+  48: python -m src.app.scripts.load_problems # or hatch run python -m src.app.scripts.load_problems
+----------------------------------------
+  54: hatch shell
+  55: hatch run dev
+  56: ```
+----------------------------------------
+  59: 
+  60: For secure WebSocket connections (WSS), use the SSL certificates in the certs folder:
+  61: 
+----------------------------------------
+  64: # or
+  65: hatch run dev_webrtc
+  66: ```
+----------------------------------------
+  83: 
+  84: ### 🧪 Start development server
+  85: 
+----------------------------------------
+  86: ```bash
+  87: npm run dev
+  88: ```
+----------------------------------------
+  91: 
+  92: ## 🔒 Docker Deployment with Reverse Proxy
+  93: 
+  94: The application now uses a Docker-only deployment with Nginx as a reverse proxy, eliminating the need for direct TLS configuration on the frontend.
+  95: 
+----------------------------------------
+  97: 
+  98: - **Nginx**: Handles TLS termination and routes requests to frontend/backend
+  99: - **Frontend**: Runs in Docker, uses relative URLs (no hardcoded ports)
+ 100: - **Backend**: Runs in Docker on plain HTTP internally, no TLS needed
+ 101: - **URLs**: Everything goes through `https://frontend.localhost`
+ 102: 
+----------------------------------------
+ 104: 
+ 105: 1. **No TLS complications**: Backend runs on plain HTTP inside Docker network
+ 106: 2. **No hardcoded URLs**: Frontend uses relative paths that work in any environment
+ 107: 3. **Simplified WebSockets**: All WS/WSS connections go through Nginx proxy
+ 108: 4. **Production-ready**: Same setup works in development and production
+ 109: 
+ 110: ⚠️ **Note**: The old `NODE_TLS_REJECT_UNAUTHORIZED=0` workaround is no longer needed with this architecture.
+ 111: 
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/scan_project.py ---
+   2: import re
+   3: from pathlib import Path
+   4: import pathspec
+   5: 
+----------------------------------------
+   7: KEYWORDS = [
+   8:     # NextAuth.js/session/middleware
+   9:     'nextauth', 'session', 'jwt', 'callback', 'middleware', 'authorize', 'token', 'secret',
+  10:     'gettoken', 'getsession', 'useSession', 'authOptions', 'jwtCallback', 'sessionCallback',
+  11:     # Cookie/security
+  12:     'cookie', 'cookies', 'set-cookie', 'httpOnly', 'secure', 'sameSite', 'domain', 'path',
+  13:     # Proxy/Docker/Nginx
+  14:     'nginx', 'proxy', 'reverse_proxy', 'location', 'rewrite', 'upstream', 'docker', 'network',
+  15:     # Routing/protection
+  16:     'protected', 'redirect', 'signin', 'signout', 'login', 'logout', 'api/auth', 'api/user-auth',
+  17:     # FastAPI OAuth2
+  18:     'OAuth2PasswordBearer', 'tokenUrl', 'dependency', 'verify_token',
+  19:     # Misc
+  20:     'production', 'dev', 'env', 'environment', 'hostname', 'localhost', '127.0.0.1'
+  21: ]  # Focused for deployment, routing, websockets, API, and security
+----------------------------------------
+  23: '''KEYWORDS = [
+  24:     'axios','api','env','fetch(','auth',
+  25:     'route','router','endpoint','request','response','url','baseurl','host','port','proxy','cors',
+  26:     'token','jwt','bearer','cookie','session','login','logout','register','signup',
+  27:     'ssl','tls','certificate','cert','key','redirect','callback','origin','header','set-cookie',
+  28:     'csrf','secure','httpOnly','domain','path','403','401','404','500'
+  29: ]'''
+----------------------------------------
+  31: 
+  32: # Load .gitignore as a PathSpec
+  33: def load_gitignore(root_dir):
+  34:     gitignore_path = os.path.join(root_dir, '.gitignore')
+  35:     if not os.path.exists(gitignore_path):
+  36:         return pathspec.PathSpec.from_lines('gitwildmatch', [])
+  37:     with open(gitignore_path, 'r') as f:
+  38:         lines = f.readlines()
+  39:     return pathspec.PathSpec.from_lines('gitwildmatch', lines)
+  40: 
+----------------------------------------
+  41: # Search with context
+  42: def print_with_context(file_path, keyword_regex):
+  43:     try:
+  44:         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+  45:             lines = f.readlines()
+----------------------------------------
+  46:     except Exception as e:
+  47:         print(f"Could not read file: {file_path} ({e})")
+  48:         return
+----------------------------------------
+  77:     # Step 3: Print the merged blocks
+  78:     print(f"\n--- {file_path} ---")
+  79:     for start, end in merged_blocks:
+----------------------------------------
+  83: 
+  84: def print_whole_file(file_path):
+  85:     print(f"\n=== {file_path} ===")
+  86:     try:
+  87:         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+  88:             print(f.read())
+----------------------------------------
+  89:     except Exception as e:
+  90:         print(f"Could not read file: {file_path} ({e})")
+  91: 
+  92: def is_text_file(filepath, blocksize=512):
+  93:     try:
+  94:         with open(filepath, 'rb') as f:
+  95:             chunk = f.read(blocksize)
+----------------------------------------
+ 103: def walk_project(root='.'):
+ 104:     root = os.path.abspath(root)
+ 105:     spec = load_gitignore(root)
+----------------------------------------
+ 107: 
+ 108:     for dirpath, _, filenames in os.walk(root):
+ 109:         # Skip .git directories entirely
+ 110:         if '.git' in dirpath.split(os.sep):
+ 111:             continue
+----------------------------------------
+ 113:         if (
+ 114:             'components' in dirpath.split(os.sep)
+ 115:             and (
+ 116:                 dirpath.endswith('components') or
+ 117:                 dirpath.endswith(os.sep + 'components') or
+ 118:                 os.sep + 'components' + os.sep in dirpath
+ 119:             )
+----------------------------------------
+ 122:         for filename in filenames:
+ 123:             full_path = os.path.join(dirpath, filename)
+ 124:             relative_path = os.path.relpath(full_path, root)
+ 125: 
+----------------------------------------
+ 126:             # Skip files inside .git directory (extra safety)
+ 127:             if '/.git/' in full_path or full_path.endswith('/.git') or relative_path.startswith('.git/'):
+ 128:                 continue
+----------------------------------------
+ 133: 
+ 134:             if spec.match_file(relative_path):
+ 135:                 continue
+----------------------------------------
+ 139: 
+ 140:             if not is_text_file(full_path):
+ 141:                 continue
+----------------------------------------
+ 142: 
+ 143:             if 'docker' in filename.lower():
+ 144:                 print_whole_file(full_path)
+ 145:             else:
+ 146:                 print_with_context(full_path, keyword_regex)
+ 147: 
+----------------------------------------
+
+=== /home/blaise/Dev/compe561/leetcode-study-partner/docker-compose.yaml ===
+services:
+  db:
+    image: postgres
+    container_name: meetcode-postgres
+    restart: always
+    ports:
+      - "5431:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: chickenjockey
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+# Backend-http used to be here too
+
+  backend: #-https:
+    build:
+      context: ./backend
+    container_name: meetcode-backend-https
+    restart: always
+    expose:
+      - "8000"
+    # ports:
+    #   - "8000:8000"
+    depends_on:
+      - db
+    env_file:
+      - ./backend/.env.runtime
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://backend:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    entrypoint: ["./entrypoint-http.sh"]
+
+  frontend:
+    build:
+      context: ./frontend
+    env_file:
+      - ./frontend/.env.runtime
+    container_name: meetcode-frontend
+    restart: always
+    ports:
+      - "3000:3000"  # Adjust port as needed for your frontend
+    depends_on:
+      - backend
+
+
+  nginx:
+      image: nginx:latest
+      container_name: meetcode-reverse-proxy
+      restart: always
+      volumes:
+        - ./reverse-proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+        - ./reverse-proxy/certs:/etc/nginx/certs:ro
+      ports:
+        - "443:443"
+      depends_on:
+        - backend
+        - frontend
+
+volumes:
+  postgres_data:
+
+
+=== /home/blaise/Dev/compe561/leetcode-study-partner/DOCKER_URL_MIGRATION.md ===
+# Docker URL Migration Summary
+
+This document summarizes the changes made to migrate from hardcoded localhost URLs to a Docker-only deployment with Nginx reverse proxy.
+
+## ✅ Changes Made
+
+### 1. Frontend URL Updates
+
+#### **constants.ts**
+- **Before**: `export const API_HOST_BASE_URL: string = process.env.NEXT_PUBLIC_API_HOST_BASE_URL || 'https://backend:8000/';`
+- **After**: `export const API_HOST_BASE_URL: string = "/";`
+- **Impact**: All API calls now use relative URLs that work through the reverse proxy
+
+#### **WebSocket URLs**
+- **Before**: Hardcoded `wss://localhost:8000/ws/...`
+- **After**: Dynamic URLs derived from `window.location`
+```typescript
+const { protocol, host } = window.location
+const wsBase = protocol === "https:" ? "wss" : "ws"
+const socket = new WebSocket(`${wsBase}://${host}/ws/queue`)
+```
+
+#### **Fetch Calls**
+- **Before**: `fetch("http://localhost:8000/api/problem/tags")`
+- **After**: `fetch("/api/problem/tags")`
+- **Impact**: All HTTP requests now go through the reverse proxy
+
+### 2. Backend CORS Configuration
+
+#### **main.py**
+- **Before**: 
+  ```python
+  origins = ["http://frontend.localhost:3000"]
+  allow_credentials=True
+  allow_headers=["*"]
+  ```
+- **After**:
+  ```python
+  origins = ["https://frontend.localhost"]
+  allow_credentials=False  # JWT in Authorization header, not cookies
+  allow_headers=["Authorization", "Content-Type"]
+  ```
+
+### 3. Environment Variables
+
+#### **.env.production**
+- **Before**: `NEXT_PUBLIC_API_URL=https://backend:8000`
+- **After**: `NEXT_PUBLIC_API_URL=` (blank - using relative URLs)
+
+#### **.env.runtime**
+- **Before**: `NEXTAUTH_URL=http://localhost:3000`
+- **After**: `NEXTAUTH_URL=https://frontend.localhost`
+
+### 4. Nginx Configuration Fix
+
+#### **Critical Auth Routing**
+- **Issue**: NextAuth routes (`/api/auth/*`) were being sent to backend instead of staying in frontend
+- **Fix**: Added specific routing for NextAuth:
+  ```nginx
+  # NextAuth API routes stay in frontend
+  location /api/auth/ {
+      proxy_pass http://frontend:3000/api/auth/;
+  }
+  
+  # Backend API routes (everything except /api/auth/)
+  location /api/ {
+      proxy_pass http://backend:8000/api/;
+  }
+  ```
+
+### 5. Auth Configuration
+
+#### **auth.tsx**
+- **Before**: `export const API_HOST_BASE_URL = process.env.NEXT_PUBLIC_API_HOST_BASE_URL!;`
+- **After**: `import { API_HOST_BASE_URL } from '@/lib/constants';`
+- **Impact**: Auth calls now use the same relative URL logic as other API calls
+
+### 4. Documentation Updates
+
+#### **README.md**
+- **Removed**: Section about `NODE_TLS_REJECT_UNAUTHORIZED=0`
+- **Added**: New section explaining Docker-only architecture with reverse proxy benefits
+
+#### **Backend WebSocket Test Page**
+- **Updated**: HTML template to use dynamic WebSocket URLs
+
+## ✅ Files Modified
+
+### Frontend
+```
+frontend/src/lib/constants.ts
+frontend/src/lib/auth.tsx
+frontend/features/webrtc/hooks/use-signaling.ts
+frontend/src/app/matchmaking/page.tsx
+frontend/.env.production
+frontend/.env.runtime
+```
+
+### Backend
+```
+backend/src/app/main.py
+backend/src/app/routes/websocket.py
+```
+
+### Infrastructure
+```
+reverse-proxy/nginx.conf
+```
+
+### Documentation
+```
+README.md
+DOCKER_URL_MIGRATION.md (this file)
+```
+
+## ✅ Architecture Benefits
+
+1. **No Hardcoded URLs**: Everything uses relative paths that work in any environment
+2. **Simplified TLS**: Backend runs on plain HTTP internally, Nginx handles TLS
+3. **Production Ready**: Same Docker setup works for development and production
+4. **WebSocket Compatibility**: All WS/WSS connections work through reverse proxy
+5. **Environment Agnostic**: Code works whether deployed locally or in cloud
+
+## ✅ Key URL Patterns
+
+| Component | Old Pattern | New Pattern |
+|-----------|-------------|-------------|
+| API Calls | `http://localhost:8000/api/*` | `/api/*` |
+| WebSockets | `wss://localhost:8000/ws/*` | `${wsBase}://${host}/ws/*` |
+| Frontend Access | `http://localhost:3000` | `https://frontend.localhost` |
+| Backend Internal | `https://backend:8000` | `http://backend:8000` (internal) |
+
+## ✅ Testing Checklist
+
+- [ ] API calls work through reverse proxy
+- [ ] WebSocket connections establish properly
+- [ ] Authentication flows work with new URLs
+- [ ] Video chat signaling works
+- [ ] Match-making queue functions correctly
+- [ ] All environment configurations are correct
+
+## ✅ Migration Complete
+
+All hardcoded `localhost:8000` URLs have been removed from the frontend codebase. The application now uses a clean Docker-only architecture with Nginx reverse proxy handling all routing and TLS termination.
+
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/.gitignore ---
+  19: 
+  20: # production
+  21: /build
+----------------------------------------
+  32: 
+  33: # env files (can opt-in for committing if needed)
+  34: .env*
+  35: !.env.production
+  36: 
+----------------------------------------
+  41: *.tsbuildinfo
+  42: next-env.d.ts
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/entrypoint.sh ---
+   3: 
+   4: #echo "Starting environment variable substitution..."
+   5: #
+----------------------------------------
+  10: #
+  11: # Replace env variable placeholders with real values
+  12: #printenv | grep NEXT_PUBLIC_ | while read -r line ; do
+  13: #  key=$(echo $line | cut -d "=" -f1)
+----------------------------------------
+  18: #  # Find all files that we have permissions to modify and replace the placeholders
+  19: #  find /app -type f -name "*.js" -writable -exec sed -i "s|$key|$value|g" {} \; 2>/dev/null || echo "Warning: Some JS files could not be updated"
+  20: #  find /app -type f -name "*.html" -writable -exec sed -i "s|$key|$value|g" {} \; 2>/dev/null || echo "Warning: Some HTML files could not be updated"
+  21: #  find /app -type f -name "*.json" -writable -exec sed -i "s|$key|$value|g" {} \; 2>/dev/null || echo "Warning: Some JSON files could not be updated"
+  22: #done
+----------------------------------------
+  23: #
+  24: #echo "Environment variable substitution completed"
+  25: 
+----------------------------------------
+  26: # Force Node.js to accept self-signed certificates
+  27: # export NODE_TLS_REJECT_UNAUTHORIZED=0
+  28: 
+----------------------------------------
+  31: 
+  32: # Execute the container's main process (CMD in Dockerfile)
+  33: echo "Starting Next.js application..."
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/tsconfig.json ---
+  20:     ],
+  21:     "paths": {
+  22:       "@/*": ["./src/*"]
+----------------------------------------
+  24:   },
+  25:   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  26:   "exclude": ["node_modules"]
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/README.md ---
+   4: 
+   5: First, run the development server:
+   6: 
+----------------------------------------
+   7: ```bash
+   8: npm run dev
+   9: # or
+  10: yarn dev
+  11: # or
+  12: pnpm dev
+  13: # or
+  14: bun dev
+  15: ```
+----------------------------------------
+  16: 
+  17: Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+  18: 
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/package.json ---
+   5: 	"scripts": {
+   6: 		"dev": "next dev --turbopack",
+   7: 		"build": "next build",
+----------------------------------------
+  45: 	},
+  46: 	"devDependencies": {
+  47: 		"@eslint/eslintrc": "^3",
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/next.config.ts ---
+   4:   reactStrictMode: true,
+   5:   // Removed rewrites since we're using Nginx for routing
+   6:   // async rewrites() {
+   7:   //   return [
+----------------------------------------
+   8:   //     {
+   9:   //       source : "/api/:path*",
+  10:   //       destination: "http://backend:8000/api/:path*"
+  11:   //     },
+----------------------------------------
+  12:   //     {
+  13:   //       source: "/ws/:path*",
+  14:   //       destination: "http://backend:8000/ws/:path*",
+  15:   //     },
+----------------------------------------
+
+=== /home/blaise/Dev/compe561/leetcode-study-partner/frontend/Dockerfile ===
+# syntax=docker.io/docker/dockerfile:1
+
+FROM node:20-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Install dependencies based on the preferred package manager
+COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
+RUN \
+  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+  elif [ -f package-lock.json ]; then npm ci; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
+
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+#COPY .env.production .env.production
+
+# Next.js collects completely anonymous telemetry data about general usage.
+# Learn more here: https://nextjs.org/telemetry
+# Uncomment the following line in case you want to disable telemetry during the build.
+# ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN \
+  if [ -f yarn.lock ]; then yarn run build; \
+  elif [ -f package-lock.json ]; then npm run build; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
+
+# Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+# Uncomment the following line in case you want to disable telemetry during runtime.
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT=3000
+
+# server.js is created by next build from the standalone output
+# https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
+ENV HOSTNAME="0.0.0.0"
+CMD ["node", "server.js"]
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/.env.production ---
+   1: 
+   2: # Environment variables for Docker deployment with reverse proxy
+   3: # No longer need NEXT_PUBLIC_API_URL since we use relative URLs that work through Nginx
+   4: 
+----------------------------------------
+   8: # Legacy commented out URLs for reference
+   9: # NEXT_PUBLIC_API_URL=http://localhost:8000/
+  10: # NEXT_PUBLIC_API_URL=https://backend:8000    # no longer needed
+  11: # NEXT_PUBLIC_API_URL=https://localhost:8000/
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/eslint.config.mjs ---
+   1: import { dirname } from "path";
+   2: import { fileURLToPath } from "url";
+   3: import { FlatCompat } from "@eslint/eslintrc";
+----------------------------------------
+   4: 
+   5: const __filename = fileURLToPath(import.meta.url);
+   6: const __dirname = dirname(__filename);
+----------------------------------------
+
+=== /home/blaise/Dev/compe561/leetcode-study-partner/frontend/.old_dockerignore ===
+# Node junk
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Local env
+.env
+.env.local
+.env.development
+.env.production
+
+# Build output (if any)
+.next
+out
+
+# Misc
+.DS_Store
+.git
+
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/src/middleware.ts ---
+   1: import { withAuth } from "next-auth/middleware";
+   2: 
+----------------------------------------
+   3: export default withAuth({
+   4:   callbacks: {
+   5:     authorized: ({ token, req }) => {
+   6:       console.log("=== MIDDLEWARE DEBUG ===");
+   7:       console.log("Path:", req.nextUrl.pathname);
+   8:       console.log("Token exists:", !!token);
+   9:       console.log("Token content:", token);
+  10:       console.log("Returning:", !!token);
+  11:       console.log("========================");
+----------------------------------------
+  12: 
+  13:       // For protected routes, require a valid token
+  14:       return !!token;
+  15:     },
+----------------------------------------
+  20: export const config = {
+  21:   matcher: ["/dashboard", "/dashboard/:path*", "/matchmaking", "/matchmaking/:path*",
+  22:             "/communication", "/communication/:path*", "/review", "/review/:path*"],
+  23: };
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/src/app/layout.tsx ---
+   7: import { Toaster } from 'sonner';
+   8: import { Providers } from '@/providers/session';
+   9: 
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/src/app/webrtc/page.tsx ---
+  77:                             <DropdownMenuContent>
+  78:                                 <DropdownMenuItem>Select Device</DropdownMenuItem>
+  79:                             </DropdownMenuContent>
+----------------------------------------
+  86:                             <DropdownMenuContent>
+  87:                                 <DropdownMenuItem>Select Device</DropdownMenuItem>
+  88:                             </DropdownMenuContent>
+----------------------------------------
+  95:                             <DropdownMenuContent>
+  96:                                 <DropdownMenuItem>Select Device</DropdownMenuItem>
+  97:                             </DropdownMenuContent>
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/src/app/login/page.tsx ---
+   1: import { LoginForm } from "@/components/Auth/login-form"
+   2: 
+   3: export default function LoginPage() {
+   4:   return (
+----------------------------------------
+   6:       <div className="flex w-full max-w-sm flex-col gap-6">
+   7:         <LoginForm />
+   8:       </div>
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/src/app/(auth)/sign-in/page.tsx ---
+   1: export default function SignInPage() {
+   2: 	return <h1>SignIn Page</h1>;
+   3: }
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/src/app/videochat/VideoChatClient.tsx ---
+  23:     if (!matchId || !peerId || !role) {
+  24:       console.error('Missing match data in URL, redirecting...');
+  25:       router.push('/matchmaking');
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/src/app/api/auth/[...nextauth]/route.ts ---
+   1: import { authOptions } from "@/lib/auth";
+   2: import NextAuth from "next-auth";
+   3: 
+   4: const handler = NextAuth(authOptions);
+   5: 
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/src/app/review/review-form.tsx ---
+  28: 
+  29:   //const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+  30: 
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/src/app/matchmaking/page.tsx ---
+   5: import { CheckboxGroup } from "./checkbox-group"
+   6: import { useState, useEffect, useCallback } from "react"
+   7: import { Checkbox } from "@/components/ui/checkbox"
+   8: import { useSession } from "next-auth/react"
+   9: import { useRouter } from "next/navigation"
+----------------------------------------
+  33: export default function Matchmaking() {
+  34:   const { data: session } = useSession();
+  35:   const [categories, setCategories] = useState<string[]>([])
+----------------------------------------
+  52:   // Check if begin button should be enabled
+  53:   const isBeginEnabled = useCallback(() => {
+  54:     // At least one programming language must be selected
+----------------------------------------
+  63:   // Handle begin button click
+  64:   const handleBegin = useCallback(() => {
+  65:     if (!isBeginEnabled()) return
+----------------------------------------
+  67:     try {
+  68:       // Get the access token from session
+  69:       const token = session?.accessToken;
+  70: 
+  71:       if (!token) {
+  72:         console.error("No access token found in session");
+  73:         console.log("Session data:", session);
+  74:         setIsConnecting(false);
+----------------------------------------
+  78:     const init_data = {
+  79:       token,
+  80:       ticket:{
+----------------------------------------
+  94: 
+  95:       console.log("Using token for WebSocket connection:", token);
+  96: 
+  97:       // Derive WebSocket URL from current location - no more hardcoded URLs
+  98:       const { protocol, host } = window.location
+  99:       const wsBase = protocol === "https:" ? "wss" : "ws"
+----------------------------------------
+ 100: 
+ 101:       // Create WebSocket connection with relative path
+ 102:       const socket = new WebSocket(`${wsBase}://${host}/ws/queue`);
+----------------------------------------
+ 138:     }
+ 139:   }, [selectedLanguages, selectedCategories, allowUncategorized, isBeginEnabled, session, router])
+ 140: 
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/src/providers/session.tsx ---
+   2: 
+   3: import { SessionProvider } from "next-auth/react";
+   4: 
+----------------------------------------
+   5: export function Providers({ children }: { children: React.ReactNode }) {
+   6:   return <SessionProvider>{children}</SessionProvider>;
+   7: };
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/src/lib/auth.tsx ---
+   1: import NextAuth, { NextAuthOptions } from 'next-auth';
+   2: import CredentialsProvider from 'next-auth/providers/credentials';
+----------------------------------------
+  10:     id?: string;
+  11:     accessToken?: string;
+  12:     refreshToken?: string;
+  13:     expiresIn?: number;
+----------------------------------------
+  15: 
+  16:   interface Session {
+  17:     accessToken?: string;
+  18:     refreshToken?: string;
+  19:     error?: string;
+----------------------------------------
+  22: 
+  23: declare module 'next-auth/jwt' {
+  24:   interface JWT {
+  25:     accessToken?: string;
+  26:     refreshToken?: string;
+  27:     expiresAt?: number;
+----------------------------------------
+  31: 
+  32: export const authOptions: NextAuthOptions = {
+  33:   providers: [
+----------------------------------------
+  39:       },
+  40:       async authorize(credentials) {
+  41:         try {
+----------------------------------------
+  49: 
+  50:           const response = await axios.post(`${BACKEND_API_URL}user-auth/token`, data, {
+  51:             headers: {
+----------------------------------------
+  55: 
+  56:           const { access_token, refresh_token, expires_in } = response.data;
+  57: 
+  58:           if (access_token && refresh_token) {
+  59:             return {
+  60:               id: credentials.username, // Use username as ID instead of access_token
+  61:               accessToken: access_token,
+  62:               refreshToken: refresh_token,
+  63:               expiresIn: expires_in,
+----------------------------------------
+  74:     GitHubProvider({
+  75:       clientId: process.env.GITHUB_CLIENT_ID!,
+  76:       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+  77:     }),
+----------------------------------------
+  78:     GoogleProvider({
+  79:       clientId: process.env.GOOGLE_CLIENT_ID!,
+  80:       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+  81:     }),
+----------------------------------------
+  82:   ],
+  83:   session: {
+  84:     strategy: 'jwt',
+  85:   },
+  86:   callbacks: {
+  87:     async redirect({ url, baseUrl }) {
+  88:       return url.startsWith(baseUrl) ? url : baseUrl;
+----------------------------------------
+  89:     },
+  90:     async signIn({ user, account }) {
+  91:       if (account?.provider === 'google' || account?.provider === 'github') {
+----------------------------------------
+  96:             provider: account.provider,
+  97:             access_token: account.access_token,
+  98:           });
+----------------------------------------
+ 127: 
+ 128:     async jwt({ token, user, account }) {
+ 129:       console.log("=== JWT CALLBACK DEBUG ===");
+ 130:       console.log("Has user:", !!user);
+----------------------------------------
+ 131:       console.log("Account type:", account?.type);
+ 132:       console.log("Current token:", token);
+ 133:       console.log("User data:", user);
+----------------------------------------
+ 135:       if (user && account?.type === "credentials") {
+ 136:         console.log("Setting up credentials token");
+ 137:         token.accessToken = user.accessToken;
+ 138:         token.refreshToken = user.refreshToken;
+ 139:         token.expiresAt = Date.now() + (user.expiresIn ?? 0) * 1000;
+ 140:         token.sub = user.id; // Make sure sub is set for NextAuth
+ 141:         console.log("Token after setup:", token);
+ 142:       }
+----------------------------------------
+ 143: 
+ 144:       // For OAuth providers, just return the token as-is
+ 145:       if (account?.type !== "credentials" && account?.type) {
+ 146:         console.log("OAuth account, returning token as-is");
+ 147:         return token;
+ 148:       }
+----------------------------------------
+ 150:       // For credentials, check if refresh is needed
+ 151:       if (account?.type === "credentials" || token.accessToken) {
+ 152:         if (token.expiresAt && Date.now() < token.expiresAt) {
+ 153:           console.log("Token still valid, no refresh needed");
+ 154:           return token;
+ 155:         }
+----------------------------------------
+ 156: 
+ 157:         console.log("Attempting token refresh");
+ 158:         try {
+----------------------------------------
+ 159:           const response = await axios.post(`${BACKEND_API_URL}user-auth/refresh`, {
+ 160:             refresh_token: token.refreshToken,
+ 161:           });
+----------------------------------------
+ 162: 
+ 163:           const { access_token, expires_in } = response.data;
+ 164: 
+ 165:           const refreshedToken = {
+ 166:             ...token,
+ 167:             accessToken: access_token,
+ 168:             expiresAt: Date.now() + (expires_in ?? 0) * 1000,
+----------------------------------------
+ 170: 
+ 171:           console.log("Token refreshed successfully:", refreshedToken);
+ 172:           return refreshedToken;
+ 173:         } catch (error) {
+ 174:           console.error('Token refresh error:', error);
+ 175:           return { ...token, error: 'RefreshAccessTokenError' };
+ 176:         }
+----------------------------------------
+ 178: 
+ 179:       console.log("Returning token unchanged:", token);
+ 180:       return token;
+ 181:     },
+----------------------------------------
+ 182: 
+ 183:     async session({ session, token }) {
+ 184:       session.accessToken = token.accessToken;
+ 185:       session.refreshToken = token.refreshToken;
+ 186:       session.error = token.error;
+ 187:       return session;
+ 188:     },
+----------------------------------------
+ 190:   events: {
+ 191:     async signOut({ token }) {
+ 192:       try {
+ 193:         if (token?.refreshToken) {
+ 194:           await axios.post(`${BACKEND_API_URL}user-auth/logout`, {
+ 195:             refresh_token: token.refreshToken,
+ 196:           });
+ 197:           console.log('Tokens revoked successfully');
+ 198:         }
+----------------------------------------
+ 199:       } catch (error) {
+ 200:         console.error('Token revocation failed:', error);
+ 201:       }
+----------------------------------------
+ 203:   },
+ 204:   secret: process.env.NEXTAUTH_SECRET,
+ 205:   pages: {
+ 206:     signIn: '/login',
+ 207:   },
+----------------------------------------
+ 209: 
+ 210: export default NextAuth(authOptions);
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/src/lib/constants.ts ---
+   1: // API URL for client-side requests (goes through reverse proxy)
+   2: export const API_HOST_BASE_URL: string = "/api/";
+----------------------------------------
+   4: // API URL for server-side requests (direct to backend container)
+   5: export const BACKEND_API_URL: string = process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/` : "/api/";
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/src/hooks/useDashboardData.ts ---
+   6: 
+   7: export default function useDashboardData(user_id: string, accessToken: string) {
+   8:   const [streak, setStreak] = useState<number | null>(null);
+----------------------------------------
+  20:             headers: {
+  21:               Authorization: `Bearer ${accessToken}`,
+  22:             },
+----------------------------------------
+  25:             headers: {
+  26:               Authorization: `Bearer ${accessToken}`,
+  27:             },
+----------------------------------------
+  30:             headers: {
+  31:               Authorization: `Bearer ${accessToken}`,
+  32:             },
+----------------------------------------
+  58: 
+  59:     if (user_id && accessToken) fetchData();
+  60:   }, [user_id, accessToken]);
+  61: 
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/features/webrtc/hooks/use-user-media.ts ---
+   2: 
+   3: import { useState, useEffect, useCallback } from "react"
+   4: 
+----------------------------------------
+   7:   const [error, setError] = useState<Error | null>(null)
+   8:   const [availableDevices, setAvailableDevices] = useState<{
+   9:     videoinput: MediaDeviceInfo[]
+  10:     audioinput: MediaDeviceInfo[]
+  11:     audiooutput: MediaDeviceInfo[]
+  12:   }>({
+----------------------------------------
+  16:   })
+  17:   const [currentDevices, setCurrentDevices] = useState<{
+  18:     audioinput?: string
+----------------------------------------
+  22: 
+  23:   // Update the list of available devices
+  24:   const updateAvailableDevices = useCallback(async () => {
+  25:     if (typeof navigator === "undefined" || !navigator.mediaDevices) return
+  26: 
+----------------------------------------
+  27:     try {
+  28:       const devices = await navigator.mediaDevices.enumerateDevices()
+  29: 
+----------------------------------------
+  30:       const grouped = {
+  31:         audioinput: devices.filter((d) => d.kind === "audioinput"),
+  32:         videoinput: devices.filter((d) => d.kind === "videoinput"),
+  33:         audiooutput: devices.filter((d) => d.kind === "audiooutput"),
+  34:       }
+----------------------------------------
+  35: 
+  36:       setAvailableDevices(grouped)
+  37:     } catch (err) {
+  38:       console.warn("Failed to get media devices", err)
+  39:     }
+----------------------------------------
+  41: 
+  42:   // Initialize device list
+  43:   useEffect(() => {
+  44:     const initDevices = async () => {
+  45:       try {
+  46:         // First request permissions to get labeled devices
+  47:         await navigator.mediaDevices
+  48:           .getUserMedia({ audio: true, video: true })
+----------------------------------------
+  56: 
+  57:         // Now enumerate devices
+  58:         await updateAvailableDevices()
+  59:       } catch (err) {
+  60:         console.error("Error initializing devices:", err)
+  61:       }
+----------------------------------------
+  63: 
+  64:     initDevices()
+  65: 
+  66:     // Listen for device changes
+  67:     if (typeof navigator !== "undefined" && navigator.mediaDevices) {
+  68:       navigator.mediaDevices.addEventListener("devicechange", updateAvailableDevices)
+  69:     }
+----------------------------------------
+  71:     return () => {
+  72:       if (typeof navigator !== "undefined" && navigator.mediaDevices) {
+  73:         navigator.mediaDevices.removeEventListener("devicechange", updateAvailableDevices)
+  74:       }
+----------------------------------------
+  75:     }
+  76:   }, [updateAvailableDevices])
+  77: 
+  78:   // Get stream with specific devices
+  79:   const getStreamWithDevices = useCallback(
+  80:     async (videoDeviceId?: string, audioDeviceId?: string) => {
+  81:       if (typeof navigator === "undefined" || !navigator.mediaDevices) return null
+  82: 
+----------------------------------------
+  88: 
+  89:         // Build constraints based on selected devices
+  90:         const constraints: MediaStreamConstraints = {
+  91:           video: videoDeviceId ? { deviceId: { exact: videoDeviceId } } : true,
+  92:           audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true,
+  93:         }
+----------------------------------------
+  96: 
+  97:         // Get the stream with selected devices
+  98:         const newStream = await navigator.mediaDevices.getUserMedia(constraints)
+  99:         setStream(newStream)
+----------------------------------------
+ 101: 
+ 102:         // Update current devices
+ 103:         setCurrentDevices({
+ 104:           videoinput: newStream.getVideoTracks()[0]?.getSettings().deviceId,
+ 105:           audioinput: newStream.getAudioTracks()[0]?.getSettings().deviceId,
+ 106:         })
+----------------------------------------
+ 117: 
+ 118:   // Switch to a different media device
+ 119:   const switchDevice = useCallback(
+ 120:     async (kind: "audioinput" | "videoinput" | "audiooutput", deviceId: string) => {
+ 121:       if (typeof navigator === "undefined" || !navigator.mediaDevices) return
+ 122: 
+ 123:       // Handle audio output device separately
+ 124:       if (kind === "audiooutput") {
+ 125:         setCurrentDevices((prev) => ({ ...prev, audiooutput: deviceId }))
+ 126:         return
+----------------------------------------
+ 129:       try {
+ 130:         // Get a new stream with the selected device
+ 131:         const constraints: MediaStreamConstraints = {}
+----------------------------------------
+ 134:         if (kind === "audioinput") {
+ 135:           constraints.audio = { deviceId: { exact: deviceId } }
+ 136:           if (stream?.getVideoTracks().length) {
+----------------------------------------
+ 138:             const videoSettings = videoTrack.getSettings()
+ 139:             constraints.video = { deviceId: { exact: videoSettings.deviceId } }
+ 140:           }
+----------------------------------------
+ 141:         } else if (kind === "videoinput") {
+ 142:           constraints.video = { deviceId: { exact: deviceId } }
+ 143:           if (stream?.getAudioTracks().length) {
+----------------------------------------
+ 145:             const audioSettings = audioTrack.getSettings()
+ 146:             constraints.audio = { deviceId: { exact: audioSettings.deviceId } }
+ 147:           }
+----------------------------------------
+ 149: 
+ 150:         // Get a completely new stream with the selected devices
+ 151:         const newStream = await navigator.mediaDevices.getUserMedia(constraints)
+ 152: 
+----------------------------------------
+ 187: 
+ 188:         // Update current devices state
+ 189:         setCurrentDevices((prev) => ({ ...prev, [kind]: deviceId }))
+ 190:       } catch (err) {
+ 191:         console.error(`Failed to switch ${kind} device:`, err)
+ 192:       }
+----------------------------------------
+ 208:     error,
+ 209:     availableDevices,
+ 210:     currentDevices,
+ 211:     switchDevice,
+ 212:     getStreamWithDevices,
+ 213:   }
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/features/webrtc/hooks/scripts.ts ---
+   9:     try{
+  10:         stream = await navigator.mediaDevices.getUserMedia(constraints);
+  11:     }catch{
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/features/webrtc/hooks/use-webrtc.ts ---
+   2: 
+   3: import { useState, useEffect, useRef, useCallback } from "react"
+   4: import { useSignaling } from "./use-signaling"
+----------------------------------------
+  21:   // Initialize WebRTC peer connection
+  22:   const initPeerConnection = useCallback(() => {
+  23:     if (typeof window === "undefined" || !localStream) return null
+----------------------------------------
+  72:   // Start connection (only once)
+  73:   const startConnection = useCallback(() => {
+  74:     if (startedRef.current) return
+----------------------------------------
+  87:   // Toggle audio
+  88:   const toggleAudio = useCallback(() => {
+  89:     if (!localStream) return
+----------------------------------------
+  97:   // Toggle video
+  98:   const toggleVideo = useCallback(() => {
+  99:     if (!localStream) return
+----------------------------------------
+ 107:   // Hang up
+ 108:   const hangUp = useCallback(() => {
+ 109:     if (pcRef.current) {
+----------------------------------------
+ 116: 
+ 117:     window.location.href = "/matchmaking"
+ 118:   }, [])
+----------------------------------------
+ 155:   // WebRTC signaling functions
+ 156:   const createOffer = async (): Promise<RTCSessionDescriptionInit> => {
+ 157:     if (!peerConnection) throw new Error("Peer connection not initialized")
+----------------------------------------
+ 167: 
+ 168:   const createAnswer = async (offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit> => {
+ 169:     if (!peerConnection) throw new Error("Peer connection not initialized")
+----------------------------------------
+ 170: 
+ 171:     await peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
+ 172: 
+----------------------------------------
+ 178: 
+ 179:   const setRemoteDescription = async (description: RTCSessionDescriptionInit): Promise<void> => {
+ 180:     if (!peerConnection) throw new Error("Peer connection not initialized")
+----------------------------------------
+ 181: 
+ 182:     await peerConnection.setRemoteDescription(new RTCSessionDescription(description))
+ 183:   }
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/frontend/features/webrtc/hooks/use-signaling.ts ---
+  10:   peerConnection: RTCPeerConnection | null
+  11:   createOffer: () => Promise<RTCSessionDescriptionInit>
+  12:   createAnswer: (offer: RTCSessionDescriptionInit) => Promise<RTCSessionDescriptionInit>
+  13:   setRemoteDescription: (desc: RTCSessionDescriptionInit) => Promise<void>
+  14:   addIceCandidate: (candidate: RTCIceCandidateInit) => Promise<void>
+----------------------------------------
+  32: 
+  33:     // Derive WebSocket URL from current location
+  34:     const { protocol, host } = window.location
+  35:     const wsBase = protocol === "https:" ? "wss" : "ws"
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/reverse-proxy/nginx.conf ---
+   2:     listen 443 ssl;
+   3:     server_name frontend.localhost;
+   4: 
+   5:     ssl_certificate     /etc/nginx/certs/frontend.localhost.pem;
+   6:     ssl_certificate_key /etc/nginx/certs/frontend.localhost-key.pem;
+   7: 
+   8:     # NextAuth API routes - MUST come before /api/ to take precedence
+   9:     location ^~ /api/auth/ {
+  10:         proxy_pass http://frontend:3000;
+  11:         proxy_set_header Host $host;
+  12:         proxy_set_header X-Forwarded-For $remote_addr;
+  13:         proxy_set_header X-Real-IP $remote_addr;
+  14:         proxy_set_header X-Forwarded-Proto $scheme;
+  15:     }
+----------------------------------------
+  16: 
+  17:     # Backend API routes (everything except /api/auth/)
+  18:     location /api/ {
+  19:         proxy_pass http://backend:8000;
+  20:         proxy_set_header Host $host;
+  21:         proxy_set_header X-Forwarded-For $remote_addr;
+  22:         proxy_set_header X-Real-IP $remote_addr;
+  23:         proxy_set_header X-Forwarded-Proto $scheme;
+  24:     }
+----------------------------------------
+  26:     # WebSocket upgrade handling
+  27:     location /ws/ {
+  28:         proxy_pass http://backend:8000/ws/;
+  29:         proxy_http_version 1.1;
+  30:         proxy_set_header Upgrade $http_upgrade;
+  31:         proxy_set_header Connection "Upgrade";
+  32:         proxy_set_header Host $host;
+  33:         proxy_set_header X-Real-IP $remote_addr;
+  34:         proxy_set_header X-Forwarded-Proto $scheme;
+  35:     }
+----------------------------------------
+  37:     # Everything else goes to frontend
+  38:     location / {
+  39:         proxy_pass http://frontend:3000;
+  40:         proxy_set_header Host $host;
+  41:         proxy_set_header X-Forwarded-For $remote_addr;
+  42:         proxy_set_header X-Real-IP $remote_addr;
+  43:         proxy_set_header X-Forwarded-Proto $scheme;
+  44:     }
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/reverse-proxy/certs/frontend.localhost.pem ---
+  13: /fOpwMtezKe415imcU9rCWL7l8bo6e42T0TWHT4jtcg36QM4NJsmkY4VGZWKmCkK
+  14: 3M3QVapjcP1AnpTk1WJPepT3JlphWG/jJPYDEvQ3bWWIjWGcPLisrHSZ4jSZjUJx
+  15: fOdFCAP+UiRSRk5t67Nnchbn8vcCAwEAAaN6MHgwDgYDVR0PAQH/BAQDAgWgMBMG
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/pyproject.toml ---
+  21: classifiers = [
+  22:   "Development Status :: 4 - Beta",
+  23:   "Programming Language :: Python",
+----------------------------------------
+  40:   "pydantic-settings>=2.8.1",
+  41:   "pyjwt>=2.10.1",
+  42:   "python-dotenv>=1.1.0",
+  43:   "ruff>=0.9.7",
+----------------------------------------
+  55: [tool.hatch.version]
+  56: path = "src/app/__about__.py"
+  57: 
+  58: [tool.hatch.envs.default]
+  59: # Default environment settings
+  60: python = "3.12"
+----------------------------------------
+  61: installer = "uv"
+  62: path = ".venv"
+  63: 
+  64: [tool.hatch.envs.default.scripts]
+  65: # Default environment scripts for development and database operations
+  66: dev = "fastapi dev {args:src/app/main.py}"
+  67: dev_webrtc = "uvicorn src.app.main:app --reload --host 0.0.0.0 --port 8000 --ssl-keyfile ./certs/key.pem --ssl-certfile ./certs/cert.pem"
+  68: 
+  69: [tool.hatch.envs.types]
+  70: installer = "uv"
+----------------------------------------
+  73: ]
+  74: [tool.hatch.envs.types.scripts]
+  75: check = "mypy --install-types --non-interactive {args:src/app tests}"
+----------------------------------------
+  84: 
+  85: [tool.coverage.paths]
+  86: app = ["src/app", "*/app/src/app"]
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/entrypoint.sh ---
+  13: 
+  14: # Set Python path so 'app' can be found
+  15: export PYTHONPATH=/app/src
+  16: 
+----------------------------------------
+
+=== /home/blaise/Dev/compe561/leetcode-study-partner/backend/.dockerignore ===
+# Python environment
+__pycache__/
+*.pyc
+.venv
+.venv/
+env/
+venv/
+
+# Local env files
+.env
+*.env
+
+# Docker
+docker-compose.yaml
+
+# Misc
+.DS_Store
+.git
+
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/entrypoint-http.sh ---
+  13: 
+  14: # Set Python path so 'app' can be found
+  15: export PYTHONPATH=/app/src
+  16: 
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/README.md ---
+  14: 
+  15: ### 2. Create a Virtual Environment
+  16: 
+  17: This project uses Hatch, which is used to manage virtual environments. If you don't have it installed yet, install it now using:
+  18: ```bash
+----------------------------------------
+  23: 
+  24: Use the .venv defined in pyproject.toml to install all required packages using uv:
+  25: ```bash
+  26: hatch env create
+  27: ```
+----------------------------------------
+  28: 
+  29: ### 4. Set Up Environment Variables
+  30: 
+  31: Create a .env file in the backend/ folder and include the following variables. These are required for database connection and token handling, and the values are temporary for now:
+  32: ```bash
+----------------------------------------
+  33: DATABASE_URL="sqlite:///./sql_app.db"
+  34: SECRET_KEY="secret"
+  35: SECRET_KEY_ACCESS="access"
+  36: SECRET_KEY_REFRESH="refresh"
+  37: ```
+----------------------------------------
+  39: ### 5. Run the application
+  40: Start a local development server using fastapi dev src/app/main.py:
+  41: ```bash
+  42: hatch run dev
+  43: ```
+----------------------------------------
+  47: ```bash
+  48: http://127.0.0.1:8000/docs
+  49: ```
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/requirements.txt ---
+   4: pydantic
+   5: python-dotenv
+   6: passlib[bcrypt]
+   7: pyjwt
+   8: websockets
+----------------------------------------
+
+=== /home/blaise/Dev/compe561/leetcode-study-partner/backend/Dockerfile ===
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+RUN pip install uv && uv pip install --system --no-cache-dir -r uv.lock
+
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+
+COPY . .
+# COPY .env.runtime .env.runtime
+
+RUN chmod +x ./entrypoint.sh
+RUN chmod +x ./entrypoint-http.sh
+
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/seed_users.py ---
+   1: from sqlalchemy.orm import Session
+   2: from uuid import UUID
+----------------------------------------
+   4: from app.models.user import User
+   5: from app.core.database import SessionLocal
+   6: from app.core.auth import get_password_hash
+----------------------------------------
+  12: def seed_users():
+  13:     db: Session = SessionLocal()
+  14: 
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/tests/test_queue.py ---
+   8: 
+   9: BASE_WS_URL = "ws://localhost:8000/ws/queue"
+  10: 
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/main.py ---
+   8: from app.core.database import Base, engine
+   9: from fastapi.middleware.cors import CORSMiddleware
+  10: 
+----------------------------------------
+  16:     background_tasks.add(task)
+  17:     task.add_done_callback(background_tasks.discard)
+  18:     print("[Startup] Matchmaking loop started")
+----------------------------------------
+  34: 
+  35: # CORS configuration for Docker-only deployment with Nginx proxy
+  36: origins = [
+  37:     "https://frontend.localhost",  # Updated for Docker setup with reverse proxy
+  38: ]
+  39: app.add_middleware(
+  40:     CORSMiddleware,
+  41:     allow_origins=origins,
+  42:     allow_credentials=False,        # Only True if using cookies; we use JWT in Authorization header
+  43:     allow_methods=["*"],
+  44:     allow_headers=["Authorization", "Content-Type"],  # Authorization header needed for JWT
+  45: )
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/dependencies.py ---
+   1: from app.core.database import SessionLocal
+   2: from fastapi.security import OAuth2PasswordBearer
+   3: 
+----------------------------------------
+   4: def get_db():
+   5:     db = SessionLocal()
+   6:     try:
+----------------------------------------
+  10: 
+  11: oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/user-auth/token")
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/core/database.py ---
+   2: from sqlalchemy.orm import declarative_base
+   3: from sqlalchemy.orm import sessionmaker
+   4: 
+----------------------------------------
+  10: 
+  11: SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+  12: 
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/core/auth.py ---
+   2: from app.core.config import settings
+   3: from app.schemas.token import TokenData
+   4: from fastapi import HTTPException
+   5: from fastapi.security import OAuth2PasswordBearer
+   6: from passlib.context import CryptContext
+   7: import jwt
+   8: from starlette.status import HTTP_401_UNAUTHORIZED
+   9: 
+  10: SECRET_KEY = settings.SECRET_KEY
+  11: SECRET_KEY_ACCESS = settings.SECRET_KEY_ACCESS
+  12: SECRET_KEY_REFRESH = settings.SECRET_KEY_REFRESH
+  13: ALGORITHM = "HS256"
+  14: ACCESS_TOKEN_EXPIRE_MINUTES = 30
+  15: REFRESH_TOKEN_EXPIRE_DAYS = 1
+  16: 
+  17: oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/user-auth/token")
+  18: 
+----------------------------------------
+  23: 
+  24: # Functions for access token
+  25: 
+  26: def create_access_token(data: dict, expires_delta: timedelta | None = None):
+  27:     to_encode = data.copy()
+----------------------------------------
+  28:     expire = datetime.now(UTC) + (
+  29:         expires_delta if expires_delta else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+  30:         )
+----------------------------------------
+  32:     to_encode.update({"exp": expire})
+  33:     encoded_jwt = jwt.encode(to_encode, SECRET_KEY_ACCESS, algorithm=ALGORITHM)
+  34:     return encoded_jwt
+  35: 
+  36: def decode_access_token(token: str) -> TokenData:
+  37:     try:
+  38:         payload = jwt.decode(token, SECRET_KEY_ACCESS, algorithms=[ALGORITHM])
+  39:         username = payload.get("sub")
+----------------------------------------
+  41:             raise HTTPException(
+  42:                 status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token"
+  43:             )
+  44:         return TokenData(username=username)
+  45:     except jwt.InvalidTokenError:
+  46:         raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token")
+  47: 
+  48: # Functions for refresh token
+  49: 
+  50: def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
+  51:     to_encode = data.copy()
+----------------------------------------
+  52:     expire = datetime.now(UTC) + (
+  53:         expires_delta if expires_delta else timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+  54:     )
+----------------------------------------
+  56:     to_encode.update({"exp": expire})
+  57:     encoded_jwt = jwt.encode(to_encode, SECRET_KEY_REFRESH, algorithm=ALGORITHM)
+  58:     return encoded_jwt
+  59: 
+  60: def decode_refresh_token(token: str) -> TokenData:
+  61:     try:
+  62:         payload = jwt.decode(token, SECRET_KEY_REFRESH, algorithms=[ALGORITHM])
+  63:         username = payload.get("sub")
+----------------------------------------
+  65:             raise HTTPException(
+  66:                 status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token"
+  67:             )
+  68:         return TokenData(username=username)
+  69:     except jwt.InvalidTokenError:
+  70:         raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token")
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/core/config.py ---
+   2: 
+   3: from dotenv import load_dotenv
+   4: from pydantic_settings import BaseSettings, SettingsConfigDict
+----------------------------------------
+   5: import os
+   6: load_dotenv()
+   7: 
+   8: DATABASE_URL = os.getenv("DATABASE_URL")
+   9: SECRET_KEY = os.getenv("SECRET_KEY")
+  10: ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
+  11: REFRESH_TOKEN = os.getenv("REFRESH_TOKEN")
+  12: 
+----------------------------------------
+  15:     DATABASE_URL: str
+  16:     SECRET_KEY: str
+  17:     SECRET_KEY_ACCESS: str
+  18:     SECRET_KEY_REFRESH: str
+  19:     POSTGRES_USER: str
+----------------------------------------
+  20: 
+  21:     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+  22: 
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/services/review.py ---
+   1: from datetime import UTC, datetime
+   2: from sqlalchemy.orm import Session
+   3: from fastapi import HTTPException
+----------------------------------------
+   7: 
+   8: def create_review(db: Session, review: UserReviewCreate):
+   9: 
+----------------------------------------
+  36: 
+  37: def get_reviews_received(db: Session, user_id: int):
+  38:     reviews = db.query(Review).filter(Review.guest_id == user_id).all()
+----------------------------------------
+  42: 
+  43: def get_reviews_given(db: Session, user_id: int):
+  44:     reviews = db.query(Review).filter(Review.host_id == user_id).all()
+----------------------------------------
+  48: 
+  49: def get_review_by_match_id(db: Session, match_id: int):
+  50:     review = db.query(Review).filter(Review.match_id == match_id).first()
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/services/user_data.py ---
+   7: from fastapi import HTTPException
+   8: from sqlalchemy.orm import Session
+   9: from app.models.user import User
+----------------------------------------
+  13: 
+  14: def create_user_data(db: Session, user_id: UUID):
+  15:     user = db.query(User).filter(User.id == user_id).first()
+----------------------------------------
+  21:         profile_picture=None,
+  22:         last_login=datetime.now(UTC),
+  23:         updated_at=datetime.now(UTC),
+----------------------------------------
+  32: def update_user_data(
+  33:     db: Session,
+  34:     user_id: UUID,
+----------------------------------------
+  58: 
+  59: def get_user_data(db: Session, user_id: UUID):
+  60:     user_data = db.query(UserData).filter(UserData.user_id == user_id).first()
+----------------------------------------
+  66: 
+  67: def delete_user_data(db: Session, user_id: UUID):
+  68:     user_data = db.query(UserData).filter(UserData.user_id == user_id).first()
+----------------------------------------
+  77: 
+  78: def get_match_categories_count(db: Session, user_id: UUID):
+  79:     matches = (
+----------------------------------------
+  93: 
+  94: def get_last_match(db: Session, user_id: UUID):
+  95:     last_match = (
+----------------------------------------
+ 106: 
+ 107: def get_streaks(db: Session, user_id: UUID) -> dict:
+ 108:     user_data = db.query(UserData).filter(UserData.user_id == user_id).first()
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/services/matchmaking.py ---
+   4: from app.schemas.queue import QueueTicket
+   5: from sqlalchemy.orm import Session
+   6: import app.services.match as match_service
+----------------------------------------
+  46: 
+  47: async def find_problem_id_from_preferences(categories: list[str], db: Session = None):
+  48:     # If "None" is in categories, include uncategorized problems
+----------------------------------------
+  95: 
+  96: async def create_matches_from_pairs(pairs: List[Tuple[QueueTicket,QueueTicket]], db: Session):
+  97:     created_match_ids = []
+----------------------------------------
+ 164: 
+ 165: async def matchmaking_poll(db: Session):
+ 166:     """Main matchmaking loop that runs continuously to match users."""
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/services/matchmaker.py ---
+   2: from uuid import UUID
+   3: from sqlalchemy.orm import Session
+   4: import asyncio
+----------------------------------------
+  78: 
+  79:     async def create_match(self, pair: Tuple[QueueTicket, QueueTicket], db: Session) -> UUID:
+  80:         """Database interaction"""
+----------------------------------------
+ 126: 
+ 127:     async def execute_matchmaking_cycle(self, db: Session):
+ 128:         """Full matchmaking workflow (run every few seconds)"""
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/services/match.py ---
+   3: from fastapi import HTTPException
+   4: from sqlalchemy.orm import Session
+   5: from sqlalchemy import or_
+----------------------------------------
+  19: # CREATE - Create match
+  20: def create_match(db: Session, match: MatchCreate):
+  21:     new_match_id: UUID = uuid.uuid4()
+----------------------------------------
+  42: # UPDATE - Start match
+  43: def start_match(db: Session, match_id: UUID):
+  44:     check_match_id(db, match_id)
+----------------------------------------
+  53: # UPDATE - End match
+  54: def end_match(db: Session, match_id: UUID, match_data: MatchEnd):
+  55:     check_match_id(db, match_id)
+----------------------------------------
+  70: # READ - Get match details
+  71: def get_match_details(db: Session, match_id: UUID):
+  72:     return db.query(Match).filter(Match.match_id == match_id).all()
+----------------------------------------
+  74: # READ - Get all matches for a user
+  75: def get_all_matches(db: Session, user_id: UUID, skip: int = 0, limit: int = 100):
+  76:     check_user(db, user_id)
+----------------------------------------
+  86: # Check if host and guest are the same
+  87: def check_same_users(db: Session, host_id: UUID, guest_id: UUID):
+  88:     if host_id == guest_id:
+----------------------------------------
+  91: 
+  92: def check_match_id(db: Session, match_id: UUID):
+  93:     if not db.query(Match).filter(Match.match_id == match_id).first():
+----------------------------------------
+  96: 
+  97: def check_user(db: Session, user_id: UUID):
+  98:     if not db.query(User).filter(User.id == user_id).first():
+----------------------------------------
+ 101: 
+ 102: def get_match_by_id(db: Session, match_id: UUID) -> Match | None:
+ 103:     return db.query(Match).filter(Match.match_id == match_id).first()
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/services/token.py ---
+   1: from app.models.token import RefreshToken
+   2: from sqlalchemy.orm import Session
+   3: 
+----------------------------------------
+   5: 
+   6: def store_refresh_token(db: Session, user_id: str, refresh_token: str):
+   7:     db_token = RefreshToken(token=refresh_token, user_id=user_id)
+   8:     db.add(db_token)
+   9:     db.commit()
+----------------------------------------
+  10: 
+  11: def delete_token(db: Session, refresh_token: str):
+  12:     token_entry = db.query(RefreshToken).filter_by(token=refresh_token).first()
+  13:     if not token_entry:
+  14:         return False
+----------------------------------------
+  15: 
+  16:     db.delete(token_entry)
+  17:     db.commit()
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/services/problem.py ---
+   1: from app.schemas.problem import ProblemCreate
+   2: from sqlalchemy.orm import Session
+   3: from fastapi import HTTPException
+----------------------------------------
+  14: 
+  15: def create_problem(db: Session, problem: ProblemCreate) -> Problem:
+  16:     db_problem = Problem(
+----------------------------------------
+  27: 
+  28: def delete_problem(db: Session, lc_id: int):
+  29:     existing_problem = db.query(Problem).filter(Problem.id == lc_id).first()
+----------------------------------------
+  35: 
+  36: def update_problem(db: Session, lc_id: int, problem_update: ProblemCreate):
+  37:     existing_problem: Problem = db.query(Problem).filter(Problem.id == lc_id).first()
+----------------------------------------
+  49: 
+  50: def get_problem(db: Session, lc_id: int):
+  51:     return db.query(Problem).filter(Problem.id == lc_id).first()
+----------------------------------------
+  52: 
+  53: def get_solved_problems(db: Session, user_id: str):
+  54:     return db.query(User).filter(User.id == user_id)
+----------------------------------------
+  55: 
+  56: def get_unique_tags(db: Session):
+  57:     # Efficiently get unique tags from the ARRAY column using PostgreSQL unnest
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/services/user.py ---
+   3: from fastapi import HTTPException
+   4: from sqlalchemy.orm import Session
+   5: 
+   6: from app.core.auth import decode_access_token, get_password_hash
+   7: from app.core.config import get_settings
+----------------------------------------
+  15: 
+  16: def create_user(db: Session, user: UserCreate):
+  17:     hashed_password = get_password_hash(user.password)
+----------------------------------------
+  31: 
+  32: def update_user(db: Session, user_id: UUID, user_update: UserUpdateRequest):
+  33:     user = db.query(User).filter(User.id == user_id).first()
+----------------------------------------
+  51: 
+  52: def delete_user(db: Session, user_id: str, password: str):
+  53:     user = db.query(User).filter(User.id == user_id).first()
+----------------------------------------
+  66: 
+  67: def authenticate_user(db: Session, username: str, password: str):
+  68:     user = db.query(User).filter(User.username == username).first()
+----------------------------------------
+  75: 
+  76: def get_user_by_username(db: Session, username: str):
+  77:     user = db.query(User).filter(User.username == username).first()
+----------------------------------------
+  79: 
+  80: def get_user_by_token(db: Session, token: str) -> User:
+  81:     try:
+  82:         token_data = decode_access_token(token)
+  83:         username = token_data.username
+  84: 
+----------------------------------------
+  94: 
+  95:     except Exception as jwt_error:
+  96:         user = db.query(User).filter(User.access_token == token).first()
+  97:         if user:
+----------------------------------------
+  99: 
+ 100:     raise HTTPException(status_code=403, detail="Invalid or expired token")
+ 101: 
+----------------------------------------
+ 102: 
+ 103: def create_oauth_user(db: Session, user: OAuthUserCreate) -> User:
+ 104:     new_user = User(
+----------------------------------------
+ 108:         oauth_provider=user.provider,
+ 109:         access_token=user.access_token,
+ 110:     )
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/models/__init__.py ---
+   6: from .problem import Problem as Problem
+   7: from .token import RefreshToken
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/models/user_data.py ---
+  18:     profile_picture = Column(String, nullable=True)
+  19:     last_login = Column(DateTime, default=datetime.now(UTC))
+  20:     updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/models/token.py ---
+   1: # models/refresh_token.py
+   2: 
+----------------------------------------
+   8: from sqlalchemy.dialects.postgresql import UUID
+   9: class RefreshToken(Base):
+  10:     __tablename__ = "refresh_tokens"
+  11: 
+----------------------------------------
+  13:     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+  14:     token = Column(String, nullable=False)
+  15:     created_at = Column(DateTime, default=datetime.now(UTC))
+----------------------------------------
+  16: 
+  17:     user = relationship("User", back_populates="refresh_tokens")
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/models/user.py ---
+  23:     oauth_provider = Column(String, nullable=True)
+  24:     access_token = Column(String, nullable=True)
+  25: 
+----------------------------------------
+  30:     matches_as_guest = relationship("Match", foreign_keys="Match.guest_id", back_populates="guest", cascade="all, delete-orphan")
+  31:     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/schemas/user_data.py ---
+   8:     profile_picture: Optional[str] = None
+   9:     last_login: Optional[datetime] = None
+  10:     updated_at: Optional[datetime] = None
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/schemas/token.py ---
+   2: 
+   3: class Token(BaseModel):
+   4:     access_token: str
+   5:     refresh_token: str
+   6:     token_type: str
+   7: 
+   8: class TokenData(BaseModel):
+   9:     username: str | None = None
+----------------------------------------
+  10: 
+  11: class RefreshTokenRequest(BaseModel):
+  12:     refresh_token: str
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/schemas/user.py ---
+  44:     provider: str
+  45:     access_token: Optional[str] = None
+  46: 
+  47: class RefreshTokenRequest(BaseModel):
+  48:     refresh_token: str
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/routes/__init__.py ---
+   5: api_router = APIRouter()
+   6: api_router.include_router(user.router, prefix="/api/user-auth", tags=["User"])
+   7: api_router.include_router(user_data.router, prefix="/api/data", tags=["User Data"])
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/routes/review.py ---
+   2: from fastapi import APIRouter, Depends, HTTPException
+   3: from sqlalchemy.orm import Session
+   4: from typing import List
+----------------------------------------
+  13: @router.post("/", response_model=UserReviewRead)
+  14: def create_review(review: UserReviewCreate, db: Session = Depends(get_db)):
+  15:     review = create_review_service(db=db, review=review)
+----------------------------------------
+  18: @router.get("/received/{user_id}", response_model=List[UserReviewRead])
+  19: def get_reviews_received(user_id: UUID, db: Session = Depends(get_db)):
+  20:     reviews = db.query(Review).filter(Review.guest_id == user_id).all()
+----------------------------------------
+  25: @router.get("/given/{user_id}", response_model=List[UserReviewRead])
+  26: def get_reviews_given(user_id: UUID, db: Session = Depends(get_db)):
+  27:     reviews = db.query(Review).filter(Review.host_id == user_id).all()
+----------------------------------------
+  32: @router.get("/{match_id}", response_model=UserReviewRead)
+  33: def get_review_by_match(match_id: UUID, db: Session = Depends(get_db)):
+  34:     review = db.query(Review).filter(Review.match_id == match_id).first()
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/routes/user_data.py ---
+   6: from app.dependencies import get_db
+   7: from sqlalchemy.orm import Session
+   8: import app.services.user_data as user_data_service
+----------------------------------------
+  17:     password_data: PasswordUpdate,
+  18:     db: Session = Depends(get_db)
+  19: ):
+----------------------------------------
+  28: @router.get("/users/{user_id}/data", response_model=UserDataResponse)
+  29: def get_user_data_endpoint(user_id: UUID, db: Session = Depends(get_db)):
+  30:     user_data = user_data_service.get_user_data(db=db, user_id=user_id)
+----------------------------------------
+  35:     user_id: UUID,
+  36:     db: Session = Depends(get_db),
+  37:     token: str = Security(oauth2_scheme)
+  38: ):
+----------------------------------------
+  46:     user_id: UUID,
+  47:     db: Session = Depends(get_db),
+  48:     token: str = Security(oauth2_scheme)
+  49: ):
+----------------------------------------
+  58:     user_id: UUID,
+  59:     db: Session = Depends(get_db),
+  60:     token: str = Security(oauth2_scheme)
+  61: ):
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/routes/queue.py ---
+   1: from app.core.auth import decode_access_token
+   2: from app.core.database import SessionLocal
+   3: from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+----------------------------------------
+   8: from app.dependencies import get_db
+   9: from sqlalchemy.orm import Session
+  10: 
+----------------------------------------
+  13: @router.websocket("/queue")
+  14: async def queue_websocket(websocket: WebSocket, db: Session = Depends(dependency=get_db)):
+  15:     await websocket.accept()
+----------------------------------------
+  18:         init_data = await websocket.receive_json()
+  19:         token = init_data["token"]
+  20:         if not token:
+  21:             await websocket.close(code=1008, reason="Missing authentication token")
+  22:             return
+  23:         print(token)
+  24:         try:
+  25:             token_data = decode_access_token(token)
+  26:         except Exception as e:
+----------------------------------------
+  28:             return
+  29:         user_id = user_service.get_user_by_username(db, token_data.username).id
+  30:         ticket_data = init_data["ticket"]
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/routes/match.py ---
+   9: from app.dependencies import get_db
+  10: from sqlalchemy.orm import Session
+  11: from app.dependencies import oauth2_scheme
+----------------------------------------
+  15: @router.post("/create", response_model=MatchResponse, tags=["Match"])
+  16: def create_match(reqBody: MatchCreate, db: Session = Depends(get_db)):
+  17:     new_match = match_service.create_match(db=db, match=reqBody)
+----------------------------------------
+  20: @router.delete("/delete{match_id}")
+  21: def delete_match(reqBody: UUID, db: Session = Depends(get_db)):
+  22:     match = db.query(Match).filter(Match.match_id == reqBody).first()
+----------------------------------------
+  29: @router.put("/start/{match_id}", response_model=MatchStart, tags=["Match"])
+  30: def start_match(reqBody: UUID, db: Session = Depends(get_db)):
+  31:     existing = db.query(Match).filter(Match.match_id == reqBody).first()
+----------------------------------------
+  38: @router.put("/end/{match_id}", response_model=MatchEndResponse, tags=["Match"])
+  39: def end_match(match_id:UUID, match: MatchEnd, db: Session = Depends(get_db)):
+  40:     match_over = match_service.end_match(db=db, match_id=match_id, match_data=match)
+----------------------------------------
+  43: @router.get("/details/{match_id}", response_model=MatchDetails, tags=["Match"])
+  44: def get_match_details(match_id: UUID, db: Session = Depends(get_db)):
+  45:     details = match_service.get_match_details(db=db, match_id=match_id)
+----------------------------------------
+  55:     limit: int = 100,
+  56:     db: Session = Depends(get_db),
+  57:     token: str = Security(oauth2_scheme)
+  58: ):
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/routes/problem.py ---
+   1: from datetime import timedelta
+   2: from app.core.auth import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token
+   3: from app.schemas.problem import ProblemCreate, UniqueTagsResponse, ProblemResponse
+   4: from app.schemas.token import Token
+   5: from app.schemas.user import UserResponse, UserCreate
+----------------------------------------
+  11: from fastapi.security import OAuth2PasswordRequestForm
+  12: from sqlalchemy.orm import Session
+  13: from fastapi import HTTPException, status
+----------------------------------------
+  24: @router.get("/tags", response_model=UniqueTagsResponse)
+  25: def get_unique_tags(db: Session = Depends(get_db)):
+  26:     tags = problem_service.get_unique_tags(db)
+----------------------------------------
+  29: @router.post("/create", response_model=ProblemCreate)
+  30: def create_problem(problem: ProblemCreate, db: Session = Depends(get_db)):
+  31:     new_problem = problem_service.create_problem(db=db, problem=problem)
+----------------------------------------
+  34: @router.get("/{lc_id}")
+  35: def get_single_problem(lc_id: int, db: Session = Depends(get_db)):
+  36:     problem = problem_service.get_problem(db=db, lc_id=lc_id)
+----------------------------------------
+  41: @router.put("/update/{lc_id}", response_model=ProblemResponse)
+  42: def update_problem(lc_id: int, problem: ProblemCreate, db: Session = Depends(get_db)):
+  43:     result = problem_service.update_problem(db=db, lc_id=lc_id, problem_update=problem)
+----------------------------------------
+  46: @router.delete("/delete/{lc_id}")
+  47: def delete_problem(lc_id: int, db: Session = Depends(get_db)):
+  48:     result = problem_service.delete_problem(db=db, lc_id=lc_id)
+----------------------------------------
+  54: #@router.get("/solved/{user_id}")
+  55: #def get_solved_problems(user_id: int, db: Session = Depends(get_db)):
+  56: #    given_user = db.query(User).filter(User.id == user_id)
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/routes/match_signaling.py ---
+   3: 
+   4: from app.core.auth import decode_access_token
+   5: from app.dependencies import get_db
+----------------------------------------
+   9: from app.services.match_signaling import match_signaling_service
+  10: from sqlalchemy.orm import Session
+  11: 
+----------------------------------------
+  18: #     match_id: UUID,
+  19: #     db: Session = Depends(get_db)
+  20: # ):
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/routes/websocket.py ---
+   1: from app.core.auth import decode_access_token
+   2: from app.schemas.matchmaking import WebRTCSignal
+----------------------------------------
+  11: from app.dependencies import get_db
+  12: from sqlalchemy.orm import Session
+  13: 
+----------------------------------------
+  28:         <form action="" onsubmit="sendConnect(event)">
+  29:             <input type="text" id="jwt_token" autocomplete="off", placeholder="JWT Token"/>
+  30:             <button>Connect</button>
+----------------------------------------
+  40:             function sendConnect(event) {
+  41:                 var input = document.getElementById("jwt_token")
+  42:                 // Use relative WebSocket URL that works with reverse proxy
+  43:                 var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  44:                 var wsUrl = protocol + '//' + window.location.host + '/ws/connect?token=' + encodeURIComponent(input.value);
+  45:                 ws = new WebSocket(wsUrl);
+----------------------------------------
+  77: @router.websocket("/connect")
+  78: async def websocket_connect(websocket: WebSocket, db: Session = Depends(dependency=get_db)):
+  79:     token = websocket.query_params.get("token")
+  80:     if not token:
+  81:         await websocket.close(code=1008, reason="Missing authentication token")
+  82:         return
+----------------------------------------
+  84:     try:
+  85:         token_data = decode_access_token(token)
+  86:     except Exception as e:
+----------------------------------------
+  90:     try:
+  91:         user = user_service.get_user_by_username(db, token_data.username)
+  92:         if not user:
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/routes/user.py ---
+   1: from datetime import timedelta
+   2: from app.core.auth import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS, oauth2_scheme, create_access_token, create_refresh_token, decode_refresh_token
+   3: from app.models.token import RefreshToken
+   4: from app.schemas.token import Token, RefreshTokenRequest
+   5: from app.schemas.user import DeleteUserRequest, UserResponse, UserCreate, UserUpdateRequest
+----------------------------------------
+  10: import app.services.user_data as user_data_service
+  11: import app.services.token as token_service
+  12: from app.schemas.user import OAuthUserCreate
+----------------------------------------
+  16: from fastapi.security import OAuth2PasswordRequestForm
+  17: from sqlalchemy.orm import Session
+  18: from fastapi import HTTPException, status
+----------------------------------------
+  23: @router.post("/register", response_model=UserResponse)
+  24: def register_user(user: UserCreate, db: Session = Depends(get_db)):
+  25:     new_user = user_service.create_user(db=db, user=user)
+----------------------------------------
+  29: 
+  30: @router.post("/token", response_model=Token)
+  31: async def login_for_access_token(
+  32:     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+  33: ):
+----------------------------------------
+  39:         raise HTTPException(
+  40:             status_code=status.HTTP_401_UNAUTHORIZED,
+  41:             detail="Incorrect username or password",
+----------------------------------------
+  44: 
+  45:     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+  46:     access_token = create_access_token(
+  47:         data={"sub": user.username}, expires_delta=access_token_expires
+  48:     )
+----------------------------------------
+  49: 
+  50:     refresh_token_expires = timedelta(days = REFRESH_TOKEN_EXPIRE_DAYS)
+  51:     refresh_token = create_refresh_token(
+  52:         data={"sub": user.username}, expires_delta=refresh_token_expires
+  53:     )
+----------------------------------------
+  54: 
+  55:     token_service.store_refresh_token(db=db, user_id=user.id, refresh_token=refresh_token)
+  56: 
+  57:     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+  58: 
+----------------------------------------
+  59: @router.post("/refresh")
+  60: def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):
+  61:     refresh_token = request.refresh_token
+  62: 
+  63:     token_in_db = db.query(RefreshToken).filter_by(token=refresh_token).first()
+  64:     if not token_in_db:
+  65:         raise HTTPException(status_code=401, detail="Invalid refresh token")
+  66: 
+----------------------------------------
+  67: 
+  68:     token_data = decode_refresh_token(refresh_token)
+  69:     new_access_token = create_access_token(data={"sub": token_data.username})
+  70:     return {"access_token": new_access_token, "token_type": "bearer"}
+  71: 
+  72: @router.post("/logout")
+  73: def logout(request: RefreshTokenRequest, db: Session = Depends(get_db)):
+  74:     refresh_token = request.refresh_token
+  75:     success = token_service.delete_token(db=db, refresh_token=refresh_token)
+  76:     if not success:
+  77:         raise HTTPException(status_code=401, detail="Invalid refresh token")
+  78:     return {"message": "Logged out successfully"}
+----------------------------------------
+  82: def get_current_user(
+  83:     db: Session = Depends(get_db),
+  84:     token: str = Security(oauth2_scheme)
+  85: ):
+  86:     return user_service.get_user_by_token(db=db, token=token)
+  87: 
+----------------------------------------
+  92:     user_update: UserUpdateRequest,
+  93:     db: Session = Depends(get_db)
+  94: ):
+----------------------------------------
+ 101: @router.delete("/users/{user_id}", response_model=dict)
+ 102: def delete_user_route(user_id: str, delete_request: DeleteUserRequest, db: Session = Depends(get_db)):
+ 103:     password = delete_request.password
+----------------------------------------
+ 106: @router.post("/oauth-register")
+ 107: def register_oauth_user(user: OAuthUserCreate, db: Session = Depends(get_db)):
+ 108:     existing_user = db.query(User).filter(User.email == user.email).first()
+----------------------------------------
+
+--- /home/blaise/Dev/compe561/leetcode-study-partner/backend/src/app/scripts/load_problems.py ---
+   3: import pandas as pd
+   4: from sqlalchemy.orm import Session
+   5: from app.core.database import SessionLocal
+   6: from app.models.problem import Problem
+----------------------------------------
+   9: 
+  10: CSV_PATH = "./data/cleaned_problems.csv"  # You can mount this into the container
+  11: 
+----------------------------------------
+  12: def load_data():
+  13:     df = pd.read_csv(CSV_PATH)
+  14: 
+  15:     session: Session = SessionLocal()
+  16: 
+  17:     existing_count = session.query(Problem).count()
+  18:     if existing_count > 0:
+----------------------------------------
+  19:         print(f"🟡 Skipping load: {existing_count} problems already in DB.")
+  20:         session.close()
+  21:         return
+----------------------------------------
+  31:         )
+  32:         session.add(problem)
+  33: 
+  34:     session.commit()
+  35:     session.close()
+  36: 
+----------------------------------------

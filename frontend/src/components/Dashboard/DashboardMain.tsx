@@ -2,14 +2,13 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import axios from "axios";
 import Streak from "@/components/Dashboard/Streak";
 import CategoryChart from "@/components/Dashboard/CategoryChart";
 import MatchHistory from "@/components/Dashboard/MatchHistory";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import useDashboardData from "@/hooks/useDashboardData";
-import { API_HOST_BASE_URL } from "@/lib/constants";
+import api, { getApiErrorMessage } from "@/lib/api";
 
 export default function DashboardMain() {
   const { data: session, status } = useSession();
@@ -20,16 +19,12 @@ export default function DashboardMain() {
     async function fetchUserId() {
       if (session?.accessToken) {
         try {
-          const response = await axios.get(`${API_HOST_BASE_URL}auth/users/me`, {
-            headers: {
-              Authorization: `Bearer ${session.accessToken}`,
-            },
-          });
+          const response = await api.get('user-auth/users/me');
           console.log("User data:", response.data);
           setUserId(response.data.id);
           setUsername(response.data.username);
-        } catch (error: any) {
-          console.error("Failed to fetch user ID:", error.response?.status, error.response?.data);
+        } catch (error: unknown) {
+          console.error("Failed to fetch user ID:", getApiErrorMessage(error));
         }
       }
     }
@@ -73,7 +68,7 @@ export default function DashboardMain() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <MatchHistory matchHistory={matchHistory} />
+            <MatchHistory matchHistory={matchHistory as { match_id: string; problem?: { problem_id?: string; categories?: string[] }; status: boolean; }[]} />
           </div>
         </div>
 

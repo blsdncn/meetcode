@@ -3,6 +3,14 @@
 import React from "react";
 import { useInView } from "react-intersection-observer";
 
+// Dynamic site URL - uses current origin in browser, fallback for SSR
+const getSiteUrl = () => {
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  return "https://meetcode.com"; // Fallback for SSR
+};
+
 const Section = ({
   title,
   children,
@@ -26,6 +34,12 @@ const Section = ({
 };
 
 export function PrivacyPolicy() {
+  const [siteUrl, setSiteUrl] = React.useState("https://meetcode.com");
+
+  React.useEffect(() => {
+    setSiteUrl(getSiteUrl());
+  }, []);
+
   return (
     <section className="px-4 py-10 md:px-8 md:py-16 lg:py-20 text-foreground">
       <div className="mx-auto max-w-4xl space-y-12 text-sm text-left leading-relaxed">
@@ -50,7 +64,7 @@ export function PrivacyPolicy() {
           <ul className="list-disc pl-6 space-y-2">
             <li><strong>Account</strong>: a unique profile created to access our service.</li>
             <li><strong>Affiliate</strong>: any entity under common control with us.</li>
-            <li><strong>Company</strong>: refers to MeetCode, also "we", "us", or "our".</li>
+            <li><strong>Company</strong>: refers to MeetCode, also &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;.</li>
             <li><strong>Cookies</strong>: small data files placed on your device.</li>
             <li><strong>Country</strong>: California, United States.</li>
             <li><strong>Device</strong>: any technology used to access the service.</li>
@@ -133,7 +147,7 @@ export function PrivacyPolicy() {
           </p>
         </Section>
 
-        <Section title="Children’s Privacy">
+        <Section title="Children's Privacy">
           <p>
             We do not knowingly collect information from children under 13. If we become aware of such collection, we will delete it promptly.
           </p>
@@ -156,10 +170,10 @@ export function PrivacyPolicy() {
           <ul className="list-disc pl-6">
             <li>
               <a
-                href="http://localhost:3000/contact"
+                href={`${siteUrl}/about/contact`}
                 className="text-blue-500 underline hover:text-blue-400"
               >
-                http://localhost:3000/contact
+                {siteUrl}/about/contact
               </a>
             </li>
           </ul>

@@ -11,10 +11,10 @@ SECRET_KEY = settings.SECRET_KEY
 SECRET_KEY_ACCESS = settings.SECRET_KEY_ACCESS
 SECRET_KEY_REFRESH = settings.SECRET_KEY_REFRESH
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 15  
 REFRESH_TOKEN_EXPIRE_DAYS = 1
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl = "auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/user-auth/token")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

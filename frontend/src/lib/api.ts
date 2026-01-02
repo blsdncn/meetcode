@@ -1,0 +1,80 @@
+/**
+ * Centralized API client for Meetcode
+ * 
+ * IMPORTANT: This client has baseURL: '/api/', so all paths must be RELATIVE.
+ * Do NOT include '/api/' prefix in your paths - it will be added automatically.
+ * 
+ * Examples:
+ *   ✅ CORRECT:   api.get('user-auth/me')
+ *   ✅ CORRECT:   api.post('reviews/', data)
+ *   ❌ WRONG:     api.get('/api/user-auth/me')     // Creates /api/api/user-auth/me
+ *   ❌ WRONG:     api.get(`${BACKEND_API_URL}...`) // Creates /api/http://...
+ * 
+ * All requests automatically include:
+ * - Authentication headers (from NextAuth session)
+ * - Error handling with automatic sign-out on 401
+ * - Unified error message extraction via getApiErrorMessage()
+ * 
+ * For server-side NextAuth callbacks, use direct axios imports instead
+ * (see frontend/src/lib/auth.tsx for examples).
+ */
+
+import axios, { AxiosError } from 'axios';
+import { getSession, signOut } from 'next-auth/react';
+
+// Create axios instance with relative base URL
+// All requests go through Nginx proxy which routes to backend
+const api = axios.create({
+  baseURL: '/api/',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor - automatically add auth headers
+api.interceptors.request.use(async (config) => {
+  const session = await getSession();
+  if (session?.accessToken) {
+    config.headers.Authorization = `Bearer ${session.accessToken}`;
+  }
+  return config;
+});
+
+// Response interceptor - handle auth errors and token refresh
+api.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config;
+
+    // Handle 401 Unauthorized - typically means token expired
+    if (error.response?.status === 401 && originalRequest && !(originalRequest as any)._retry) {
+      (originalRequest as any)._retry = true;
+      
+      // Attempt token refresh is handled by NextAuth
+      // For now, redirect to login on 401
+      console.warn('Unauthorized - redirecting to login');
+      signOut({ callbackUrl: '/login' });
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+
+// Helper to check if an error is an Axios error
+export function isApiError(error: unknown): error is AxiosError {
+  return axios.isAxiosError(error);
+}
+
+// Helper to extract error message from API response
+export function getApiErrorMessage(error: unknown): string {
+  if (isApiError(error)) {
+    const data = error.response?.data as { detail?: string; message?: string };
+    return data?.detail || data?.message || error.message || 'An error occurred';
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'An unexpected error occurred';
+}

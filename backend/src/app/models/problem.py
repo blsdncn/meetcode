@@ -9,6 +9,7 @@ class Problem(Base):
     ## ATTRIBUTES ## 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     problem_id = Column(Integer, unique=True, index=True)
+    title = Column(String(256), nullable=False)
     problem_link = Column(String(512))
     methods_video_link = Column(String(512))
     categories = Column(ARRAY(String(64))) 

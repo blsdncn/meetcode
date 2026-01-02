@@ -69,7 +69,7 @@ def end_match(db: Session, match_id: UUID, match_data: MatchEnd):
 
 # READ - Get match details
 def get_match_details(db: Session, match_id: UUID):
-    return db.query(Match).filter(Match.match_id == match_id).all()
+    return db.query(Match).filter(Match.match_id == match_id).first()
 
 # READ - Get all matches for a user
 def get_all_matches(db: Session, user_id: UUID, skip: int = 0, limit: int = 100):

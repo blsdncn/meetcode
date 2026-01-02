@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Star, ExternalLink } from "lucide-react"
 import Link from "next/link"
+import api, { getApiErrorMessage } from "@/lib/api"
 
 interface ExternalLinkType {
   url: string
@@ -21,12 +22,12 @@ export default function ReviewForm({ externalLink, matchId, hostId, guestId }: R
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
   const [description, setDescription] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-  
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+    setIsSubmitting(true)
 
     const reviewData = {
       to_host_rating: rating,
@@ -42,28 +43,17 @@ export default function ReviewForm({ externalLink, matchId, hostId, guestId }: R
     }
 
     try {
-      console.log("📡 Fetching from:", `${apiBaseUrl}/api/reviews/`)
-      const res = await fetch(`${apiBaseUrl}/api/reviews/`, {
-        
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(reviewData),
-      })
-
-      if (!res.ok) {
-        const errorText = await res.text()
-        console.error("Backend response error:", errorText)
-        throw new Error("Failed to submit review")
-      }
-
+      console.log("📡 Submitting review...")
+      await api.post('reviews/', reviewData)
       alert("Review submitted successfully!")
       router.push("/dashboard")
     } catch (error) {
-      console.error("Review submission error:", error)
+      console.error("Review submission error:", getApiErrorMessage(error))
+      // Still navigate to dashboard even on error (matches original behavior)
       alert("Review submitted.")
       router.push("/dashboard")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -140,10 +130,10 @@ export default function ReviewForm({ externalLink, matchId, hostId, guestId }: R
         <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
           <button
             type="submit"
-            disabled={rating === 0 || !description}
+            disabled={rating === 0 || !description || isSubmitting}
             className="w-full py-2 px-4 rounded-md shadow-sm text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Submit Review
+            {isSubmitting ? "Submitting..." : "Submit Review"}
           </button>
         </div>
       </form>

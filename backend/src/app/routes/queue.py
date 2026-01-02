@@ -6,6 +6,7 @@ from app.services.matchmaker import matchmaking_service
 from app.schemas.queue import QueueTicket
 import app.services.user as user_service
 from app.dependencies import get_db
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -36,8 +37,12 @@ async def queue_websocket(websocket: WebSocket, db: Session = Depends(dependency
 
         while True:
             await websocket.receive_text()
-    except (WebSocketDisconnect, Exception) as e:
+    except (WebSocketDisconnect, ValidationError, Exception) as e:
         print(f"[queue] {'User ' + str(user_id) + ' disconnected' if isinstance(e, WebSocketDisconnect) else f'Error: {e}'}")
+        if isinstance(e, ValidationError):
+            reasonstring: str = f"Validation error: {e.errors()[0]['type']}"
+            await websocket.close(code=1008, reason=reasonstring)
+            return
         await matchmaking_service.unregister_connection(user_id)
         await matchmaking_service.remove_from_queue(user_id)
         if not isinstance(e, WebSocketDisconnect):

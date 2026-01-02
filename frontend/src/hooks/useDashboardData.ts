@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import axios from "axios";
-import { API_HOST_BASE_URL } from "@/lib/constants";
+import api, { getApiErrorMessage } from "@/lib/api";
 
 export default function useDashboardData(user_id: string, accessToken: string) {
   const [streak, setStreak] = useState<number | null>(null);
@@ -16,21 +15,9 @@ export default function useDashboardData(user_id: string, accessToken: string) {
       try {
         setLoading(true);
         const [streakRes, catRes, historyRes] = await Promise.all([
-          axios.get(`${API_HOST_BASE_URL}data/users/${user_id}/dashboard`, {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }),
-          axios.get(`${API_HOST_BASE_URL}data/users/${user_id}/match-categories-count`, {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }),
-          axios.get(`${API_HOST_BASE_URL}api/match/history/${user_id}`, {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }),
+          api.get(`data/users/${user_id}/dashboard`),
+          api.get(`data/users/${user_id}/match-categories-count`),
+          api.get(`match/history/${user_id}`),
         ]);
         console.log("Streak data:", streakRes.data);
         console.log("Categories data:", catRes.data);
@@ -42,10 +29,10 @@ export default function useDashboardData(user_id: string, accessToken: string) {
         }));
         setCategories(catData);
         setMatchHistory(historyRes.data || []);
-      } catch (err: any) {
-        const errorMessage = err.response?.data?.detail || err.message || "Unknown error";
+      } catch (err: unknown) {
+        const errorMessage = getApiErrorMessage(err);
         setError(`Failed to load dashboard data: ${errorMessage}`);
-        console.error("Dashboard fetch error:", err.response?.status, err.response?.data);
+        console.error("Dashboard fetch error:", err);
       } finally {
         setLoading(false);
       }

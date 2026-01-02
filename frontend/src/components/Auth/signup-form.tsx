@@ -9,10 +9,9 @@ import { Label } from "@/components/ui/label";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import axios from "axios";
 import { toast } from "sonner";
-import { API_HOST_BASE_URL } from "@/lib/constants";
 import { useRouter } from "next/navigation";
+import api, { getApiErrorMessage } from "@/lib/api";
 
 const signUpSchema = z
   .object({
@@ -41,7 +40,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
     try {
       const { username, email, password } = data;
-      await axios.post(`${API_HOST_BASE_URL}auth/register`, {
+      await api.post('user-auth/register', {
         username,
         email,
         password,
@@ -50,11 +49,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
       router.push("/login");
       form.reset();
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        toast.error(error.response?.data?.detail || "Failed to create account.");
-      } else {
-        toast.error("An unexpected error occurred.");
-      }
+      toast.error(getApiErrorMessage(error));
     }
   };
 
