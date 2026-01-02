@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import asyncio
@@ -28,28 +29,36 @@ async def lifespan(app: FastAPI):
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    title="Meetcode API",
+    description="LeetCode Study Partner Backend API",
+    version="1.0.0"
+)
 app.include_router(api_router, prefix="")
-#app.include_router(websocket_router, prefix="/ws", tags=["WebSocket"])
 
-# CORS configuration for Docker-only deployment with Nginx proxy
-origins = [
-    "https://frontend.localhost",  # Updated for Docker setup with reverse proxy
-    "https://10.0.0.243",  # Updated for Docker setup with reverse proxy
-    #"https://10.0.199",  # Updated for Docker setup with reverse proxy
-]
+# CORS configuration from environment variable
+# Accepts comma-separated list of origins
+cors_origins_env = os.getenv("CORS_ORIGINS", "https://localhost")
+origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=False,        # Only True if using cookies; we use JWT in Authorization header
-    allow_methods=["*"],
-    allow_headers=["Authorization", "Content-Type"],  # Authorization header needed for JWT
+    allow_credentials=False,  # Using JWT in Authorization header, not cookies
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 @app.get("/")
 async def root():
-    return {"message": "Leetcode Study Partner Backend"}
+    return {"message": "Meetcode - LeetCode Study Partner Backend"}
 
 @app.get("/health")
 async def health():
+    return {"status": "healthy"}
+
+# API health endpoint for reverse proxy
+@app.get("/api/health")
+async def api_health():
     return {"status": "healthy"}

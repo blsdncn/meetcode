@@ -14,18 +14,6 @@
 # misc
 .DS_Store
 
-# Environment variables for different environments
-# Ignore all env files by default
-*.env
-
-# Track production env files (safe for public consumption)
-!**/.env.production
-
-# Still ignore secrets
-frontend/.env.runtime
-backend/.env.runtime
-
-
 # Logs
 npm-debug.log*
 yarn-debug.log*
@@ -34,6 +22,9 @@ yarn-error.log*
 # src
 **/package-lock*.json
 **.lock
+
+# Next.js
+.next
 
 # === BACKEND ===
 
@@ -60,7 +51,7 @@ htmlcov/
 
 # Logs
 *.log
-reload.log # if Uvicorn writes logs to file (optional)
+reload.log
 
 # System files
 .DS_Store
@@ -75,9 +66,6 @@ CACHEDIR.TAG
 
 # === FASTAPI / UVICORN SPECIFIC ===
 
-# Environment files
-# TODO, uncomment once people understand, jsut gonna make this dev easier
-
 # Miscellaneous
 instance/
 
@@ -85,4 +73,31 @@ instance/
 backend/test.db
 dockerstuff/
 
-.next
+# === SECURITY: Environment Files ===
+# Never commit runtime secrets to version control
+
+# Ignore all .env files by default
+*.env
+
+# Allow .env.example templates (safe for public consumption)
+!**/.env.example
+!**/.env.production
+
+# Explicitly ignore runtime environment files with secrets
+**/.env.runtime
+**/.env.local
+**/.env.*.local
+
+# === SECURITY: SSL Certificates ===
+# Never commit private keys or certificates to version control
+
+**/certs/*.pem
+**/certs/*.key
+**/certs/*.crt
+**/certs/*.csr
+
+# Keep placeholder files
+!**/.gitkeep
+
+# Allow certificate generation scripts
+!**/init_certs.sh

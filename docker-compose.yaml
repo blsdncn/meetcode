@@ -1,34 +1,48 @@
+# Meetcode Docker Compose Configuration
+# 
+# Before running, ensure you have:
+# 1. Created .env.runtime files (see .env.example templates)
+# 2. Generated SSL certificates: ./init_certs.sh
+#
+# Usage:
+#   docker-compose up -d --build
+
 services:
   db:
-    image: postgres
+    image: postgres:16-alpine
     container_name: meetcode-postgres
-    restart: always
-    ports:
-      - "5431:5432"
+    restart: unless-stopped
+    expose:
+      - "5432"  # Internal only, not exposed to host
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: chickenjockey
-      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password required - set in .env or environment}
+      POSTGRES_DB: ${POSTGRES_DB:-meetcode}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-# Backend-http used to be here too
-
-  backend: #-https:
+  backend:
     build:
       context: ./backend
+      dockerfile: Dockerfile
     container_name: meetcode-backend
-    restart: always
+    restart: unless-stopped
     expose:
       - "8000"
-    # ports:
-    #   - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file:
       - ./backend/.env.runtime
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://backend:8000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -37,28 +51,29 @@ services:
   frontend:
     build:
       context: ./frontend
-    env_file:
-      - ./frontend/.env.runtime
+      dockerfile: Dockerfile
     container_name: meetcode-frontend
-    restart: always
-    ports:
-      - "3000:3000"  # Adjust port as needed for your frontend
+    restart: unless-stopped
+    expose:
+      - "3000"
     depends_on:
       - backend
-
+    env_file:
+      - ./frontend/.env.runtime
 
   nginx:
-      image: nginx:latest
-      container_name: meetcode-reverse-proxy
-      restart: always
-      volumes:
-        - ./reverse-proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-        - ./reverse-proxy/certs:/etc/nginx/certs:ro
-      ports:
-        - "443:443"
-      depends_on:
-        - backend
-        - frontend
+    image: nginx:alpine
+    container_name: meetcode-proxy
+    restart: unless-stopped
+    volumes:
+      - ./reverse-proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./reverse-proxy/certs:/etc/nginx/certs:ro
+    ports:
+      - "443:443"
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
 
 volumes:
   postgres_data:
