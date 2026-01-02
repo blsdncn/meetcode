@@ -41,6 +41,9 @@ nano frontend/.env.runtime
 
 ### 2. Generate SSL Certificates
 
+> **SECURITY WARNING**: Never commit SSL certificates or private keys to version control.
+> The `init_certs.sh` script generates certificates locally. These are excluded by `.gitignore`.
+
 ```bash
 chmod +x init_certs.sh
 ./init_certs.sh
@@ -60,13 +63,20 @@ Or add it to a root `.env` file:
 echo "POSTGRES_PASSWORD=your-secure-password" > .env
 ```
 
-### 4. Launch the Stack
+### 4. Validate Configuration (Optional)
+
+Run the pre-deployment validation script to check for common issues:
+```bash
+./scripts/validate_deployment.sh
+```
+
+### 5. Launch the Stack
 
 ```bash
 docker-compose up -d --build
 ```
 
-### 5. Verify Deployment
+### 6. Verify Deployment
 
 ```bash
 # Check all services are running
@@ -152,15 +162,52 @@ docker-compose logs nginx
 
 ---
 
+## Security Considerations
+
+> **See [SECURITY.md](SECURITY.md) for detailed security guidelines.**
+
+### Certificate Management
+
+- **NEVER** commit SSL certificates (`.pem`, `.key`, `.crt`) to version control
+- Certificates in `reverse-proxy/certs/` and `backend/certs/` are git-ignored
+- For production: Use Let's Encrypt, Cloudflare, or your cloud provider's certificate manager
+- Regenerate certificates if you suspect they've been compromised:
+  ```bash
+  rm -rf reverse-proxy/certs/*.pem backend/certs/*.pem
+  ./init_certs.sh
+  ```
+
+### Secrets Management
+
+- All secrets are injected via environment variables
+- Never hardcode passwords, API keys, or tokens in source code
+- Use strong, randomly generated secrets (the setup guide shows how)
+
+---
+
 ## Architecture Limitations (Demo Phase)
+
+### Single-Worker Requirement
+
+> **CRITICAL**: The backend MUST run with exactly 1 Uvicorn worker.
+
+The matchmaking system uses an in-memory singleton pattern. Running multiple workers would create separate, non-communicating queues where users would never match.
+
+```bash
+# CORRECT - Single worker (default)
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+
+# WRONG - Multiple workers will break matchmaking
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+```
 
 ### In-Memory Matchmaking State
 
 The current matchmaking implementation uses an **in-memory Python Singleton**:
 
 - Queue state exists only within the single FastAPI worker process
-- **Single server deployment only** - horizontal scaling not supported
-- Server restart clears the matchmaking queue
+- **Single VPS deployment only** - horizontal scaling not supported
+- Server restart clears the matchmaking queue (users must rejoin)
 
 ### Why Not Redis?
 
