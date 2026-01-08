@@ -16,7 +16,7 @@ export default function Footer() {
 					</Link>
 				</div>
 				<p className="mt-4 md:mt-0 text-sm text-muted-foreground">
-					&copy; 2025 Meet2Code. All rights reserved.
+					&copy; 2025 MeetCode. All rights reserved.
 				</p>
 			</div>
 		</footer>

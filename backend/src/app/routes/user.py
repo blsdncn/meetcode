@@ -22,9 +22,15 @@ router = APIRouter()
 
 @router.post("/register", response_model=UserResponse)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    new_user = user_service.create_user(db=db, user=user)
-    user_data_service.create_user_data(db=db, user_id=new_user.id)
-    return new_user
+    try:
+        new_user = user_service.create_user(db=db, user=user)
+        user_data_service.create_user_data(db=db, user_id=new_user.id)
+        return new_user
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username or email already registered"
+        )
 
 
 @router.post("/token", response_model=Token)

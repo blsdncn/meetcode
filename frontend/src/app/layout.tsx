@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Meet2Code',
+  title: 'MeetCode',
   description: 'A matchmaking platform to solve programming problems together.',
   icons: {
     icon: '/meet2code.png',
