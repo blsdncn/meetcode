@@ -1,11 +1,12 @@
-# Meetcode Docker Compose Configuration
+# Meetcode Development Docker Compose Configuration
 # 
-# Before running, ensure you have:
-# 1. Created .env.runtime files (see .env.example templates)
-# 2. Generated SSL certificates: ./init_certs.sh
+# This runs ALL services in Docker with HTTPS (self-signed certs).
+# Before running:
+#   1. Generate certs: ./init_certs.sh
+#   2. Copy env templates: cp .env.backend.example .env.backend && cp .env.frontend.example .env.frontend
 #
 # Usage:
-#   docker-compose up -d --build
+#   docker compose up -d --build
 
 services:
   db:
@@ -37,10 +38,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
     env_file:
-      - ./backend/.env.runtime
+      - .env.backend
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      # Allow local frontend (host) to access backend
+      - CORS_ORIGINS=https://localhost,http://localhost,http://localhost:3000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -59,7 +64,7 @@ services:
     depends_on:
       - backend
     env_file:
-      - ./frontend/.env.runtime
+      - .env.frontend
 
   nginx:
     image: nginx:alpine
@@ -74,6 +79,8 @@ services:
     depends_on:
       - backend
       - frontend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   postgres_data:

@@ -78,15 +78,17 @@ dockerstuff/
 
 # Ignore all .env files by default
 *.env
+.env.*
 
 # Allow .env.example templates (safe for public consumption)
 !**/.env.example
-!**/.env.production
+!.env.*.example
 
 # Explicitly ignore runtime environment files with secrets
 **/.env.runtime
 **/.env.local
 **/.env.*.local
+**/.env.production
 
 # === SECURITY: SSL Certificates ===
 # Never commit private keys or certificates to version control
@@ -108,3 +110,4 @@ dockerstuff/
 *MIGRATION.md
 reviews-*.md
 artifacts/
+pgdata_mock/
