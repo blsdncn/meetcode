@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { CheckboxGroup } from "./checkbox-group"
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
-import { getSession } from "next-auth/react"
+import { getSession, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import api from "@/lib/api"
@@ -32,12 +32,22 @@ const PROGRAMMING_LANGUAGES = [
 ]
 
 export default function Matchmaking() {
-  //const { data: session } = useSession(); Move handleBegin to avoid stale token issues
+  const { status } = useSession()
+  const isGuest = status === "unauthenticated"
+  
   const [categories, setCategories] = useState<string[]>([])
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [allowUncategorized, setAllowUncategorized] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
+  const [soloMode, setSoloMode] = useState(false)
+  
+  // Force solo mode for guests
+  useEffect(() => {
+    if (isGuest) {
+      setSoloMode(true)
+    }
+  }, [isGuest])
   //const [debugMessage, setDebugMessage] = useState<string>("")
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -78,8 +88,38 @@ export default function Matchmaking() {
     return hasLanguage && hasCategory
   }, [selectedLanguages, selectedCategories, allowUncategorized])
 
+  // Handle solo mode - call API directly instead of WebSocket queue
+  const handleSoloBegin = useCallback(async () => {
+    setIsConnecting(true)
+    try {
+      // Use guest endpoint for non-authenticated users
+      const endpoint = isGuest ? "/match/solo/guest" : "/match/solo"
+      const response = await api.post(endpoint, {})
+      const { match_id } = response.data
+      
+      // Navigate to videochat with solo mode flag
+      router.push(`/videochat?match_id=${match_id}&mode=solo`)
+    } catch (error) {
+      console.error("Failed to create solo match:", error)
+      toast.error("Failed to start solo practice. Please try again.")
+      setIsConnecting(false)
+    }
+  }, [router, isGuest])
+
   // Handle begin button click
   const handleBegin = useCallback(async () => {
+    // Solo mode: skip queue, create match directly
+    if (soloMode) {
+      await handleSoloBegin()
+      return
+    }
+
+    // Block guests from joining matchmaking queue
+    if (isGuest) {
+      toast.error("You must be signed in to join matchmaking. Solo mode is available for guests.")
+      return
+    }
+
     if (!isBeginEnabled()) return
 
     try {
@@ -179,7 +219,7 @@ export default function Matchmaking() {
       console.error("Failed to connect:", error)
       setIsConnecting(false)
     }
-  }, [selectedLanguages, selectedCategories, allowUncategorized, isBeginEnabled, router, closeWebSocket])
+  }, [selectedLanguages, selectedCategories, allowUncategorized, isBeginEnabled, router, closeWebSocket, soloMode, handleSoloBegin, isGuest])
 
   // Handle cancel button click
   const handleCancel = useCallback(() => {
@@ -210,25 +250,44 @@ export default function Matchmaking() {
           />
         </div>
 
+        {/* Solo Mode Toggle */}
+        <div className="flex items-center justify-center gap-4 mt-6 p-4 border border-border rounded-lg bg-muted/30">
+          <label className={`flex items-center gap-2 text-sm ${isGuest ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+            <Checkbox
+              checked={soloMode}
+              onCheckedChange={(checked) => !isGuest && setSoloMode(checked === true)}
+              disabled={isGuest}
+            />
+            <span className="font-medium">Solo Practice Mode</span>
+          </label>
+          <span className="text-xs text-muted-foreground">
+            {isGuest 
+              ? "(Sign in to unlock matchmaking with other users)" 
+              : "(Practice alone with MeetCodeBot - no waiting!)"}
+          </span>
+        </div>
+
         {/* Inline checkbox and button */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <Checkbox
-              checked={allowUncategorized}
-              onCheckedChange={(checked) => setAllowUncategorized(checked === true)}
-            />
-            <span>Allow Uncategorized Problems?</span>
-          </label>
+          {!soloMode && (
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={allowUncategorized}
+                onCheckedChange={(checked) => setAllowUncategorized(checked === true)}
+              />
+              <span>Allow Uncategorized Problems?</span>
+            </label>
+          )}
 
           <Button
             className="self-center min-w-[100px]"
-            disabled={!isBeginEnabled() || isConnecting}
+            disabled={(!soloMode && !isBeginEnabled()) || isConnecting}
             onClick={handleBegin}
           >
-            {isConnecting ? "Connecting..." : "Begin"}
+            {isConnecting ? (soloMode ? "Starting..." : "Connecting...") : (soloMode ? "Start Solo" : "Begin")}
           </Button>
           
-          {isConnecting && (
+          {isConnecting && !soloMode && (
             <Button
               variant="destructive"
               className="self-center min-w-[100px]"

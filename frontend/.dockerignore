@@ -1,0 +1,21 @@
+# Docker Ignore File for Frontend
+# Exclude all environment files to prevent secrets leakage in Docker images
+.env*
+!.env.example
+
+# Exclude node_modules to ensure clean dependency install
+node_modules/
+
+# Exclude build artifacts
+.next/
+out/
+build/
+dist/
+
+# Exclude git
+.git/
+.gitignore
+
+# Exclude Docker setup files from the app context
+Dockerfile
+.dockerignore

@@ -61,6 +61,16 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && originalRequest && !(originalRequest as any)._retry) {
       (originalRequest as any)._retry = true;
       
+      // Check if we're in solo mode - if so, don't redirect to login
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isSoloMode = urlParams.get('mode') === 'solo';
+        if (isSoloMode) {
+          console.warn('Unauthorized in solo mode - continuing without auth');
+          return Promise.reject(error);
+        }
+      }
+      
       // Attempt token refresh is handled by NextAuth
       // For now, redirect to login on 401
       console.warn('Unauthorized - redirecting to login');

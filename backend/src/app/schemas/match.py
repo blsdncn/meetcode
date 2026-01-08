@@ -57,3 +57,13 @@ class MatchDetails(BaseModel):
     
     class Config:
         from_attributes = True
+
+class SoloMatchRequest(BaseModel):
+    problem_id: int | None = None  # Optional: if None, pick random problem
+
+class SoloMatchResponse(BaseModel):
+    match_id: UUID
+    problem_id: int
+    
+    class Config:
+        from_attributes = True

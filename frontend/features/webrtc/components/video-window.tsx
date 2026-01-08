@@ -8,6 +8,7 @@ import DeviceSelection from "./device-selection"
 import VideoCall from "./video-call"
 import LeetCodeProblemCard from "./leetcode-problem-card"
 import CollaborativeEditor from "./collaborative-editor"
+import SoloEditor from "./solo-editor"
 import api from "@/lib/api"
 
 // FIXED: Removed API_HOST_BASE_URL to prevent double /api/api/ paths
@@ -21,8 +22,8 @@ export interface LeetCodeProblem {
   url: string
 }
 
-export default function VideoWindow({ matchId, peerId, role }: { matchId: string; peerId: string; role: string }) {
-  // Device selection state
+export default function VideoWindow({ matchId, peerId, role, soloMode = false }: { matchId: string; peerId: string; role: string; soloMode?: boolean }) {
+  // Device selection state - always show in both modes
   const [isDeviceSelectionOpen, setIsDeviceSelectionOpen] = useState(true)
   const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>("")
   const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("")
@@ -227,6 +228,15 @@ export default function VideoWindow({ matchId, peerId, role }: { matchId: string
     }
   }
 
+  // Start call for solo mode (skip WebRTC connection)
+  const startSoloCall = async () => {
+    const stream = await getStreamWithDevices(selectedVideoDevice, selectedAudioDevice)
+    if (stream) {
+      setIsDeviceSelectionOpen(false)
+      setStatusMessage("Solo Practice with MeetCodeBot")
+    }
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <main className="flex-grow container mx-auto px-4 py-6 mb-20">
@@ -238,7 +248,7 @@ export default function VideoWindow({ matchId, peerId, role }: { matchId: string
             selectedAudioDevice={selectedAudioDevice}
             onDeviceSelect={handleDeviceSelect}
             onPreview={previewSelectedDevices}
-            onStartCall={startCall}
+            onStartCall={soloMode ? startSoloCall : startCall}
             localStream={localStream}
           />
         ) : (
@@ -269,16 +279,21 @@ export default function VideoWindow({ matchId, peerId, role }: { matchId: string
                   peerLeft={peerLeft}
                   onToggleAudio={toggleAudio}
                   onToggleVideo={toggleVideo}
-                  onHangUp={handleHangUp}
+                  onHangUp={soloMode ? () => window.location.href = "/matchmaking" : handleHangUp}
+                  soloMode={soloMode}
                 />
               </div>
               
-              {/* Collaborative Editor */}
+              {/* Editor - Collaborative for normal mode, Solo for solo mode */}
               <div className="min-h-0">
-                <CollaborativeEditor
-                  matchId={matchId}
-                  dataChannel={dataChannel}
-                />
+                {soloMode ? (
+                  <SoloEditor matchId={matchId} />
+                ) : (
+                  <CollaborativeEditor
+                    matchId={matchId}
+                    dataChannel={dataChannel}
+                  />
+                )}
               </div>
             </div>
           </div>

@@ -58,13 +58,16 @@ export default function MatchHistory({ matchHistory }: MatchHistoryProps) {
     return <p className="text-muted-foreground">No matches to show.</p>;
   }
 
+  // Reverse to show newest first
+  const reversedHistory = [...matchHistory].reverse();
+
   return (
-    <Card className="p-4 h-full min-h-[450px] overflow-y-auto">
-      <CardContent className="space-y-3">
-        <h2 className="text-xl font-semibold text-center text-card-foreground mb-4">Match History</h2>
-        <div className="space-y-2">
-          {matchHistory.map((match) => (
-            <Card key={match.match_id} className="px-4 py-2">
+    <Card className="flex flex-col max-h-[600px]">
+      <CardContent className="space-y-3 flex flex-col p-4">
+        <h2 className="text-xl font-semibold text-center text-card-foreground mb-4 flex-shrink-0">Match History</h2>
+        <div className="space-y-2 overflow-y-auto max-h-[500px] pr-2">
+          {reversedHistory.map((match) => (
+            <Card key={match.match_id} className="px-4 py-2 flex-shrink-0">
               <CardContent className="p-2 text-sm space-y-1">
                 <div>Problem ID: {match.problem?.problem_id ?? 'Unknown'}</div>
                 <div className="text-primary">Status: Finished</div>

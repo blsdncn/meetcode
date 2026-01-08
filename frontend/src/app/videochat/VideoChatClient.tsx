@@ -13,20 +13,31 @@ export default function VideoChatClient() {
     matchId: string;
     peerId: string;
     role: string;
+    soloMode: boolean;
   } | null>(null);
 
   useEffect(() => {
     const matchId = searchParams.get('match_id');
     const peerId = searchParams.get('peer_id');
     const role = searchParams.get('role');
+    const mode = searchParams.get('mode');
+    const soloMode = mode === 'solo';
 
+    // Solo mode only needs match_id
+    if (soloMode && matchId) {
+      setMatchData({ matchId, peerId: '', role: 'host', soloMode: true });
+      setReady(true);
+      return;
+    }
+
+    // Normal mode needs all params
     if (!matchId || !peerId || !role) {
       console.error('Missing match data in URL, redirecting...');
       router.push('/matchmaking');
       return;
     }
 
-    setMatchData({ matchId, peerId, role });
+    setMatchData({ matchId, peerId, role, soloMode: false });
     setReady(true);
   }, [searchParams, router]);
 
@@ -38,6 +49,7 @@ export default function VideoChatClient() {
         matchId={matchData.matchId}
         peerId={matchData.peerId}
         role={matchData.role}
+        soloMode={matchData.soloMode}
       />
     </main>
   );

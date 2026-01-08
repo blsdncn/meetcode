@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import HTTPException, Security
 from uuid import UUID
-from app.schemas.match import MatchCreate, MatchStart, MatchEnd, MatchDetails, MatchHistory, MatchResponse, MatchEndResponse
+from app.schemas.match import MatchCreate, MatchStart, MatchEnd, MatchDetails, MatchHistory, MatchResponse, MatchEndResponse, SoloMatchRequest, SoloMatchResponse
 from fastapi import APIRouter, Depends
 from app.models.match import Match
 
@@ -11,6 +11,9 @@ from sqlalchemy.orm import Session
 from app.dependencies import oauth2_scheme
 
 router = APIRouter()
+
+# MeetCodeBot UUID - must match seed_users.py
+MEETCODEBOT_ID = UUID("00000000-0000-0000-0000-000000000001")
 
 @router.post("/create", response_model=MatchResponse, tags=["Match"])
 def create_match(reqBody: MatchCreate, db: Session = Depends(get_db)):
@@ -60,3 +63,104 @@ def get_match_history(
     if not matches:
         raise HTTPException(status_code=404, detail="No match history found")
     return matches
+
+
+@router.post("/solo", response_model=SoloMatchResponse, tags=["Match"])
+def create_solo_match(
+    req: SoloMatchRequest,
+    db: Session = Depends(get_db),
+    token: str = Security(oauth2_scheme)
+):
+    """
+    Create a solo practice match with MeetCodeBot.
+    Instantly creates a match without queuing.
+    """
+    from app.core.auth import decode_access_token
+    from app.models.user import User
+    from app.models.problem import Problem
+    import random
+    
+    # Decode token to get user
+    token_data = decode_access_token(token)
+    user = db.query(User).filter(User.username == token_data.username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify MeetCodeBot exists
+    bot = db.query(User).filter(User.id == MEETCODEBOT_ID).first()
+    if not bot:
+        raise HTTPException(status_code=500, detail="MeetCodeBot not configured. Run seed_users.py")
+    
+    # Get problem_id (use provided or pick random)
+    problem_id = req.problem_id
+    if problem_id is None:
+        problems = db.query(Problem).all()
+        if problems:
+            problem_id = random.choice(problems).problem_id
+        else:
+            problem_id = 1  # Fallback
+    
+    # Create match with user as host and MeetCodeBot as guest
+    match_data = MatchCreate(
+        host_id=user.id,
+        guest_id=MEETCODEBOT_ID,
+        problem_id=problem_id
+    )
+    
+    new_match = match_service.create_match(db=db, match=match_data)
+    
+    return SoloMatchResponse(
+        match_id=new_match.match_id,
+        problem_id=new_match.problem_id
+    )
+
+
+# Guest user UUID - for anonymous solo practice
+GUEST_USER_ID = UUID("00000000-0000-0000-0000-000000000002")
+
+
+@router.post("/solo/guest", response_model=SoloMatchResponse, tags=["Match"])
+def create_guest_solo_match(
+    req: SoloMatchRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Create a solo practice match for guest (non-authenticated) users.
+    No authentication required - uses a shared guest user.
+    """
+    from app.models.user import User
+    from app.models.problem import Problem
+    import random
+    
+    # Verify MeetCodeBot exists
+    bot = db.query(User).filter(User.id == MEETCODEBOT_ID).first()
+    if not bot:
+        raise HTTPException(status_code=500, detail="MeetCodeBot not configured")
+    
+    # Get or create guest user
+    guest_user = db.query(User).filter(User.id == GUEST_USER_ID).first()
+    if not guest_user:
+        raise HTTPException(status_code=500, detail="Guest user not configured. Run seed_users.py")
+    
+    # Get problem_id (use provided or pick random)
+    problem_id = req.problem_id
+    if problem_id is None:
+        problems = db.query(Problem).all()
+        if problems:
+            problem_id = random.choice(problems).problem_id
+        else:
+            problem_id = 1  # Fallback
+    
+    # Create match with guest as host and MeetCodeBot as guest
+    match_data = MatchCreate(
+        host_id=GUEST_USER_ID,
+        guest_id=MEETCODEBOT_ID,
+        problem_id=problem_id
+    )
+    
+    new_match = match_service.create_match(db=db, match=match_data)
+    
+    return SoloMatchResponse(
+        match_id=new_match.match_id,
+        problem_id=new_match.problem_id
+    )

@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useEffect, useState } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { PhoneOff, MicOff, VideoOff, Mic, Video } from "lucide-react"
 
@@ -12,6 +13,7 @@ interface VideoCallProps {
   onToggleAudio: () => void
   onToggleVideo: () => void
   onHangUp: () => void
+  soloMode?: boolean
 }
 
 export default function VideoCall({
@@ -22,6 +24,7 @@ export default function VideoCall({
   onToggleAudio,
   onToggleVideo,
   onHangUp,
+  soloMode = false,
 }: VideoCallProps) {
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
@@ -51,8 +54,24 @@ export default function VideoCall({
   }
 
   return (
-    <div className="relative bg-card rounded-lg overflow-hidden border border-border h-[calc(100vh-16rem)]">
-      {remoteStream ? (
+    <div className="relative bg-card rounded-lg overflow-hidden border border-border h-full max-h-[500px]">
+      {soloMode ? (
+        /* Solo Mode: Show MeetCodeBot avatar instead of remote video */
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/30">
+          <div className="text-center">
+            <div className="relative w-32 h-32 mx-auto mb-4">
+              <Image
+                src="/meet2code.png"
+                alt="MeetCodeBot"
+                fill
+                className="rounded-full animate-spin-slow object-cover"
+              />
+            </div>
+            <h3 className="text-xl font-bold text-foreground">MeetCodeBot</h3>
+            <p className="text-sm text-muted-foreground mt-1">Solo Practice Mode</p>
+          </div>
+        </div>
+      ) : remoteStream ? (
         <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center">

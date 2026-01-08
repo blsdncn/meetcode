@@ -52,7 +52,23 @@ We use **Root** files for Docker and **Nested** files for host-machine developme
 | **Inside Docker** | `.env.frontend` | `http://backend:8000` | Uses internal container networking. |
 | **On Your Host** | `frontend/.env.local` | `https://localhost` | Goes through Nginx (Local Node can't see 'backend'). |
 
+## Seed Users (Required for Solo Mode)
+
+Before running the application, you must seed the required users:
+
+```bash
+# Run the seed script in the backend container
+docker compose exec backend python seed_users.py
+```
+
+This creates:
+- **MeetCodeBot**: The bot user for solo practice mode
+- **Guest**: The anonymous user for guest solo practice
+
+The script is safe to run multiple times and will skip users that already exist.
+
 ## Troubleshooting
 *   **401 Unauthorized**: Stale cookies. Clear cookies for `localhost` in browser DevTools.
 *   **502 Bad Gateway**: Nginx can't reach the service. Ensure `docker compose up` is active and healthy.
 *   **Cert Warnings**: This is expected with self-signed certs. Click "Advanced" -> "Proceed".
+*   **Solo Mode 500 Error**: Run the seed users script to ensure MeetCodeBot exists.

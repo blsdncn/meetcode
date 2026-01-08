@@ -16,6 +16,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username is required, must be at least 3 characters"),
@@ -23,6 +24,7 @@ const loginSchema = z.object({
 });
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
+  const router = useRouter();
   const form = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -67,6 +69,10 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
       console.error('Error during login:', error);
       toast.error('An error occurred during login');
     }
+  };
+
+  const handleGuestSolo = () => {
+    router.push('/matchmaking');
   };
 
   return (
@@ -122,6 +128,23 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                   Sign up
                 </a>
               </div>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or
+                  </span>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={handleGuestSolo}
+              >
+                Practice Solo as Guest
+              </Button>
             </div>
           </form>
         </CardContent>

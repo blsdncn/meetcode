@@ -61,16 +61,13 @@ export default function DashboardMain() {
           Welcome, <span className="text-accent">{username || 'User'}</span>
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="flex flex-col gap-6 md:col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:items-stretch">
+          <div className="md:col-span-2 flex flex-col gap-6">
             <Streak streak={streak ?? 0} />
             <CategoryChart categories={categories} />
           </div>
-
-          <div className="flex flex-col gap-6 max-h-[500px]">
-            <div className="overflow-y-auto flex-1">
-              <MatchHistory matchHistory={matchHistory as { match_id: string; problem?: { problem_id?: string; categories?: string[] }; status: boolean; }[]} />
-            </div>
+          <div className="md:col-span-1">
+            <MatchHistory matchHistory={matchHistory as { match_id: string; problem?: { problem_id?: string; categories?: string[] }; status: boolean; }[]} />
           </div>
         </div>
 
