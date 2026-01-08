@@ -113,3 +113,13 @@ artifacts/
 pgdata_mock/
 letsencrypt_mock/
 deploy-gcp-manual.md
+DEPLOYMENT.md
+DEVELOPMENT.md
+SECURITY.md
+docker-compose.dev.yml
+init_certs.sh
+problemsummary.txt
+result.txt
+reverse-proxy/nginx.dev.conf
+scan_project.py
+scripts/validate_deployment.sh
