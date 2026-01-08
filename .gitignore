@@ -111,3 +111,4 @@ dockerstuff/
 reviews-*.md
 artifacts/
 pgdata_mock/
+letsencrypt_mock/
