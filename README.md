@@ -4,94 +4,66 @@
 
 Meetcode pairs programmers for collaborative coding sessions. Users join a matchmaking queue with their preferred programming languages and problem categories, get matched with a compatible partner, and collaborate via real-time video chat while solving LeetCode problems together.
 
-## Quick Start (Demo Deployment)
+## ✨ Features
+
+- **Instant Matchmaking**: Get paired with programmers who share your language and problem preferences
+- **Real-time Collaboration**: Collaborative code editor powered by Monaco and Yjs for synchronized editing
+- **Video Chat**: WebRTC-powered peer-to-peer video communication
+- **Solo Practice Mode**: Practice alone with MeetCodeBot when no partners are available
+- **Guest Access**: Try solo practice without creating an account
+- **Kanagawa Theme**: Beautiful light (Lotus) and dark (Dragon) themes inspired by the popular Neovim colorscheme
+- **User Reviews**: Rate and review your coding partners after sessions
+- **Match History**: Track your sessions and review past problems
+
+---
+
+## Quick Start
 
 ### Prerequisites
 
 - Docker & Docker Compose v2.0+
-- OpenSSL (for certificate generation)
 - Git
 
 ### 1. Clone & Configure Environment
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/meetcode.git
+git clone https://github.com/blsdncn/meetcode.git
 cd meetcode
 
 # Copy example environment files
-cp backend/.env.example backend/.env.runtime
-cp frontend/.env.example frontend/.env.runtime
-
-# Generate secure secrets
-echo "SECRET_KEY=$(openssl rand -hex 32)" >> backend/.env.runtime
-echo "SECRET_KEY_ACCESS=$(openssl rand -hex 32)" >> backend/.env.runtime
-echo "SECRET_KEY_REFRESH=$(openssl rand -hex 32)" >> backend/.env.runtime
-echo "NEXTAUTH_SECRET=$(openssl rand -base64 32)" >> frontend/.env.runtime
-
-# Set a secure database password
-echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)" >> backend/.env.runtime
-```
-
-Edit the environment files as needed:
-```bash
-nano backend/.env.runtime
-nano frontend/.env.runtime
+cp .env.backend.example .env.backend
+cp .env.frontend.example .env.frontend
 ```
 
 ### 2. Generate SSL Certificates
 
-> **SECURITY WARNING**: Never commit SSL certificates or private keys to version control.
-> The `init_certs.sh` script generates certificates locally. These are excluded by `.gitignore`.
+Generate self-signed certificates for local development using OpenSSL:
 
 ```bash
-chmod +x init_certs.sh
-./init_certs.sh
+mkdir -p reverse-proxy/certs
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout reverse-proxy/certs/localhost-key.pem \
+  -out reverse-proxy/certs/localhost.pem \
+  -subj "/CN=localhost" \
+  -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
 ```
 
-For trusted local certificates (recommended), install [mkcert](https://github.com/FiloSottile/mkcert) first.
-
-### 3. Set Database Password
-
-Export the password for Docker Compose:
-```bash
-export POSTGRES_PASSWORD="your-secure-password"
-```
-
-Or add it to a root `.env` file:
-```bash
-echo "POSTGRES_PASSWORD=your-secure-password" > .env
-```
-
-### 4. Validate Configuration (Optional)
-
-Run the pre-deployment validation script to check for common issues:
-```bash
-./scripts/validate_deployment.sh
-```
-
-### 5. Launch the Stack
+### 3. Launch the Stack
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
-### 6. Verify Deployment
+### 4. Seed Required Users
+
+Solo practice mode requires special users to be seeded:
 
 ```bash
-# Check all services are running
-docker-compose ps
-
-# View logs
-docker-compose logs -f
-
-# Check individual services
-docker-compose logs backend
-docker-compose logs frontend
-docker-compose logs nginx
+docker compose exec backend python seed_users.py
 ```
 
-### Access Points
+### 5. Access the Application
 
 | Service | URL |
 |---------|-----|
@@ -99,19 +71,21 @@ docker-compose logs nginx
 | **API Docs** | https://localhost/api/docs |
 | **Health Check** | https://localhost/api/health |
 
+> **Note**: Accept the browser warning for self-signed certificates in development.
+
 ---
 
 ## Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         Internet                                 │
+│                         Internet                                │
 └───────────────────────────┬─────────────────────────────────────┘
                             │ HTTPS (443)
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Nginx Reverse Proxy                          │
-│  • TLS termination                                               │
+│  • TLS termination                                              │
 │  • Route /api/auth/* → Frontend (NextAuth)                      │
 │  • Route /api/* → Backend (FastAPI)                             │
 │  • Route /ws/* → Backend (WebSocket)                            │
@@ -126,7 +100,8 @@ docker-compose logs nginx
 │  • React 19         │            │  • SQLAlchemy       │
 │  • NextAuth.js      │◄──────────►│  • WebSockets       │
 │  • TailwindCSS      │  HTTP/WS   │  • JWT Auth         │
-│  • WebRTC           │            │  • Matchmaking      │
+│  • Monaco + Yjs     │            │  • Matchmaking      │
+│  • WebRTC           │            │                     │
 └─────────────────────┘            └──────────┬──────────┘
                                               │
                                               ▼
@@ -145,217 +120,130 @@ docker-compose logs nginx
 | Layer | Technology |
 |-------|------------|
 | **Frontend** | Next.js 15, React 19, TypeScript, TailwindCSS, shadcn/ui |
+| **Code Editor** | Monaco Editor, Yjs (CRDT), y-monaco binding |
 | **Backend** | FastAPI, SQLAlchemy, Pydantic, Python 3.12 |
 | **Database** | PostgreSQL 16 |
-| **Infrastructure** | Docker, Nginx, WebSockets |
+| **Infrastructure** | Docker, Nginx, WebSockets, WebRTC |
 | **Authentication** | NextAuth.js (frontend), JWT (backend) |
-| **Real-time** | WebSockets (signaling), WebRTC (video) |
+| **Real-time** | WebSockets (signaling), WebRTC (video/data) |
 
-### Data Flow
+---
+
+## Key Endpoints
+
+### Match Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/match/create` | Create a new match |
+| `POST` | `/api/match/solo` | Start solo practice (authenticated) |
+| `POST` | `/api/match/solo/guest` | Start solo practice (guest access) |
+| `PUT` | `/api/match/start/{id}` | Start a match |
+| `PUT` | `/api/match/end/{id}` | End a match |
+| `GET` | `/api/match/details/{id}` | Get match details |
+| `GET` | `/api/match/history/{user_id}` | Get user's match history |
+
+### WebSocket Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `/api/ws/queue` | Matchmaking queue WebSocket |
+| `/api/ws/match/{match_id}` | WebRTC signaling for matched users |
+
+---
+
+## Data Flow
 
 1. **Authentication**: User authenticates via NextAuth (credentials or OAuth)
 2. **Matchmaking**: User joins queue via WebSocket with language/category preferences
 3. **Matching**: Background loop pairs users with compatible preferences
 4. **Signaling**: Matched users exchange WebRTC offers/answers via WebSocket
 5. **Video Chat**: Direct peer-to-peer connection established via WebRTC
-6. **Review**: Session ends with peer review submission
+6. **Code Sync**: Yjs CRDT synchronizes code via WebRTC data channel
+7. **Review**: Session ends with peer review submission
 
 ---
 
-## Security Considerations
+## Solo Practice Mode
 
-> **See [SECURITY.md](SECURITY.md) for detailed security guidelines.**
+MeetCode supports solo practice for when you want to code alone:
 
-### Certificate Management
+- **Authenticated Users**: Start solo practice from the dashboard to track your sessions
+- **Guest Access**: Click "Practice Solo as Guest" on the login page—no account required
 
-- **NEVER** commit SSL certificates (`.pem`, `.key`, `.crt`) to version control
-- Certificates in `reverse-proxy/certs/` and `backend/certs/` are git-ignored
-- For production: Use Let's Encrypt, Cloudflare, or your cloud provider's certificate manager
-- Regenerate certificates if you suspect they've been compromised:
-  ```bash
-  rm -rf reverse-proxy/certs/*.pem backend/certs/*.pem
-  ./init_certs.sh
-  ```
-
-### Secrets Management
-
-- All secrets are injected via environment variables
-- Never hardcode passwords, API keys, or tokens in source code
-- Use strong, randomly generated secrets (the setup guide shows how)
+Solo mode pairs you with **MeetCodeBot**, a placeholder partner that allows you to use the full editor experience without waiting for a match.
 
 ---
 
-## Architecture Limitations (Demo Phase)
+## Theme
 
-### Single-Worker Requirement
+MeetCode uses the **Kanagawa** color palette:
 
-> **CRITICAL**: The backend MUST run with exactly 1 Uvicorn worker.
+- **Light Mode**: Kanagawa Lotus—warm, paper-like tones
+- **Dark Mode**: Kanagawa Dragon—comfortable dark theme with careful contrast
 
-The matchmaking system uses an in-memory singleton pattern. Running multiple workers would create separate, non-communicating queues where users would never match.
+Toggle between themes using the theme switcher in the navigation bar.
+
+
+### Quick Local Frontend Development
 
 ```bash
-# CORRECT - Single worker (default)
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+# Start all services
+docker compose up -d --build
 
-# WRONG - Multiple workers will break matchmaking
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+# Local frontend with hot reload
+cd frontend && npm run dev
 ```
 
-### In-Memory Matchmaking State
+Access at http://localhost:3000 (talks to Nginx at https://localhost for API).
 
-The current matchmaking implementation uses an **in-memory Python Singleton**:
+---
 
-- Queue state exists only within the single FastAPI worker process
-- **Single VPS deployment only** - horizontal scaling not supported
-- Server restart clears the matchmaking queue (users must rejoin)
+## Architecture Considerations
 
-### Why Not Redis?
+### Single-Worker Requirement (Demo Phase)
 
-For the demo phase, we opted for simplicity:
-- Reduced infrastructure complexity
-- Faster iteration during development
-- Acceptable for single-server demo deployments
+> **Note**: The backend runs with 1 Uvicorn worker. The matchmaking system uses an in-memory singleton for queue state.
 
-### Production Path
-
-For production deployment with multiple instances:
+For production with horizontal scaling:
 1. Replace in-memory dict with Redis
 2. Use Redis pub/sub for WebSocket broadcast
 3. Implement sticky sessions or extract signaling service
 
 ---
 
-## Environment Variables Reference
+## Environment Variables
 
-### Backend (`backend/.env.runtime`)
+### Backend (`.env.backend`)
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `POSTGRES_USER` | Yes | PostgreSQL username |
-| `POSTGRES_PASSWORD` | Yes | PostgreSQL password |
 | `SECRET_KEY` | Yes | General JWT signing key |
 | `SECRET_KEY_ACCESS` | Yes | Access token secret |
 | `SECRET_KEY_REFRESH` | Yes | Refresh token secret |
 | `CORS_ORIGINS` | Yes | Comma-separated allowed origins |
 
-### Frontend (`frontend/.env.runtime`)
+### Frontend (`.env.frontend`)
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `NEXTAUTH_URL` | Yes | Full URL of the deployment |
 | `NEXTAUTH_SECRET` | Yes | NextAuth encryption secret |
 | `BACKEND_URL` | Yes | Internal backend URL for SSR |
-| `GITHUB_CLIENT_ID` | No | GitHub OAuth client ID |
-| `GITHUB_CLIENT_SECRET` | No | GitHub OAuth client secret |
-| `GOOGLE_CLIENT_ID` | No | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
 
 ---
 
 ## Troubleshooting
 
-### Certificates not found
-
-```bash
-# Regenerate certificates
-rm -rf reverse-proxy/certs/*.pem
-./init_certs.sh
-docker-compose restart nginx
-```
-
-### Database connection refused
-
-```bash
-# Check PostgreSQL is healthy
-docker-compose ps db
-docker-compose logs db
-
-# Verify environment variables
-docker-compose exec backend env | grep POSTGRES
-```
-
-### Users not matching
-
-Verify both users have **overlapping** language AND category preferences. The matchmaking algorithm requires at least one common language and one common category.
-
-### WebSocket connection failed
-
-```bash
-# Check backend logs for WebSocket errors
-docker-compose logs -f backend | grep -i websocket
-
-# Verify nginx WebSocket configuration
-docker-compose exec nginx cat /etc/nginx/conf.d/default.conf
-```
-
-### 502 Bad Gateway
-
-```bash
-# Check if backend is healthy
-docker-compose ps
-curl -k https://localhost/api/health
-
-# Restart services
-docker-compose restart backend nginx
-```
-
----
-
-## Development
-
-### Local Development (without Docker)
-
-#### Backend
-
-```bash
-cd backend
-pip install uv
-uv sync
-
-# Set up environment
-cp .env.example .env.runtime
-
-# Run database (requires Docker)
-docker-compose up -d db
-
-# Start server
-hatch run dev
-```
-
-#### Frontend
-
-```bash
-cd frontend
-npm install
-
-# Set up environment
-cp .env.example .env.runtime
-
-# Start dev server
-npm run dev
-```
-
-### Running Tests
-
-```bash
-# Backend tests
-cd backend
-hatch run test
-
-# Frontend tests
-cd frontend
-npm test
-```
-
----
-
-## API Documentation
-
-Once the stack is running, interactive API documentation is available at:
-
-- **Swagger UI**: https://localhost/api/docs
-- **ReDoc**: https://localhost/api/redoc
+| Issue | Solution |
+|-------|----------|
+| **Solo mode 500 error** | Run `docker compose exec backend python seed_users.py` |
+| **401 Unauthorized** | Clear cookies for localhost in browser DevTools |
+| **502 Bad Gateway** | Ensure Docker services are running: `docker compose ps` |
+| **Users not matching** | Both users need overlapping language AND category preferences |
+| **WebSocket fails** | Check `docker compose logs backend | grep websocket` |
+| **Certificate warnings** | Expected with self-signed certs; click "Advanced" → "Proceed" |
 
 ---
 
@@ -372,3 +260,7 @@ Once the stack is running, interactive API documentation is available at:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### Third-Party Attributions
+
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party license information, including the Kanagawa color palette.
