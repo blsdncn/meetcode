@@ -123,3 +123,5 @@ result.txt
 reverse-proxy/nginx.dev.conf
 scan_project.py
 scripts/validate_deployment.sh
+*.pem
+*.key
