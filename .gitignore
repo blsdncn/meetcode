@@ -112,3 +112,4 @@ reviews-*.md
 artifacts/
 pgdata_mock/
 letsencrypt_mock/
+deploy-gcp-manual.md
