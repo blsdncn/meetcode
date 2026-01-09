@@ -1,5 +1,20 @@
 # syntax=docker.io/docker/dockerfile:1
 
+FROM node:20-bookworm-slim AS dev
+WORKDIR /app
+
+COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* .npmrc* ./
+RUN \
+  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+  elif [ -f package-lock.json ]; then npm ci; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
+
+EXPOSE 3000
+CMD ["npm", "run", "dev"]
+
+
 FROM node:20-alpine AS base
 
 # Install dependencies only when needed
@@ -37,6 +52,8 @@ RUN \
   else echo "Lockfile not found." && exit 1; \
   fi
 
+RUN npm audit --audit-level=high
+
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
@@ -47,6 +64,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+
+# remove potentially dangerous tools
+RUN rm -f /usr/bin/wget /usr/bin/curl /bin/nc /usr/bin/nc /usr/bin/ncat \
+    /bin/sh /bin/bash /usr/bin/sh /usr/bin/bash || true
 
 COPY --from=builder /app/public ./public
 

@@ -26,5 +26,20 @@ python -m src.app.scripts.load_problems
 # The matchmaking system uses an in-memory singleton. Multiple workers would
 # create separate queues that don't communicate, causing users to never match.
 # For scaling, replace in-memory state with Redis.
-echo "🚀 Starting FastAPI server (HTTP) with single worker..."
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+echo "Starting FastAPI server with single worker..."
+
+if [ "${BACKEND_MODE:-}" = "DEV" ]; then
+  echo "In DEV mode with reload."
+  exec uvicorn app.main:app \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 1 \
+    --reload \
+    --reload-dir /app/src 
+else
+  echo "Production mode. No reload."
+  exec uvicorn app.main:app \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 1
+fi

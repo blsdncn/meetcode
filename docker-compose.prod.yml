@@ -39,6 +39,10 @@ services:
     env_file:
       - .env.backend
     environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY}
+      - SECRET_KEY_ACCESS=${SECRET_KEY_ACCESS}
+      - SECRET_KEY_REFRESH=${SECRET_KEY_REFRESH}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -47,6 +51,19 @@ services:
       retries: 3
     # Ensure exactly 1 worker for in-memory matchmaking singleton
     entrypoint: ["./entrypoint-http.sh"]
+
+    # Security
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache:uid=1001,gid=1001
+    user: "1001:1001"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
 
   frontend:
     image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/meetcode/frontend:latest
@@ -58,6 +75,20 @@ services:
       - backend
     env_file:
       - .env.frontend
+
+    # Security
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+    environment:
+    - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 
   nginx:
     image: nginx:alpine
