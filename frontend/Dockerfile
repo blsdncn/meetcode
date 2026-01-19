@@ -65,10 +65,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# remove potentially dangerous tools
-RUN rm -f /usr/bin/wget /usr/bin/curl /bin/nc /usr/bin/nc /usr/bin/ncat \
-    /bin/sh /bin/bash /usr/bin/sh /usr/bin/bash || true
-
 COPY --from=builder /app/public ./public
 
 # Automatically leverage output traces to reduce image size
